@@ -1,10 +1,25 @@
 {
   "provinces": [
-    "Torino", "Milano", "Bergamo", "Brescia", "Varese", "Novara", "Cuneo", "Genova",
-    "Verona", "Vicenza", "Padova", "Treviso", "Venezia", "Udine",
-    "Bologna", "Modena", "Reggio Emilia", "Parma",
-    "Firenze", "Prato", "Pisa", "Roma", "Ancona", "Perugia",
-    "Napoli", "Bari", "Salerno", "Lecce", "Catania", "Palermo"
+    "Aosta",
+    "Torino", "Vercelli", "Novara", "Cuneo", "Asti", "Alessandria", "Biella", "Verbano-Cusio-Ossola",
+    "Genova", "Imperia", "La Spezia", "Savona",
+    "Varese", "Como", "Sondrio", "Milano", "Bergamo", "Brescia", "Pavia", "Cremona", "Mantova", "Lecco", "Lodi", "Monza e della Brianza",
+    "Bolzano", "Trento",
+    "Verona", "Vicenza", "Belluno", "Treviso", "Venezia", "Padova", "Rovigo",
+    "Udine", "Gorizia", "Trieste", "Pordenone",
+    "Piacenza", "Parma", "Reggio Emilia", "Modena", "Bologna", "Ferrara", "Ravenna", "Forli-Cesena", "Rimini",
+    "Massa-Carrara", "Lucca", "Pistoia", "Prato", "Firenze", "Livorno", "Pisa", "Arezzo", "Siena", "Grosseto",
+    "Perugia", "Terni",
+    "Pesaro e Urbino", "Ancona", "Macerata", "Fermo", "Ascoli Piceno",
+    "Viterbo", "Rieti", "Roma", "Latina", "Frosinone",
+    "Teramo", "Pescara", "Chieti", "L'Aquila",
+    "Campobasso", "Isernia",
+    "Caserta", "Napoli", "Avellino", "Benevento", "Salerno",
+    "Foggia", "Barletta-Andria-Trani", "Bari", "Taranto", "Brindisi", "Lecce",
+    "Potenza", "Matera",
+    "Cosenza", "Crotone", "Catanzaro", "Vibo Valentia", "Reggio Calabria",
+    "Messina", "Palermo", "Trapani", "Agrigento", "Caltanissetta", "Enna", "Catania", "Siracusa", "Ragusa",
+    "Sassari", "Nuoro", "Oristano", "Sud Sardegna", "Cagliari"
   ],
   "sectors": [
     "Distribuzione",
@@ -16,5 +31,6 @@
   "next_index": 0,
   "cycle_count": 0,
   "last_run_utc": null,
-  "last_province": null
+  "last_province": null,
+  "note": "Ordine geografico Nord->Sud (Valle d'Aosta -> Sicilia), Sardegna in coda per completare la copertura di tutta Italia. 107 province totali."
 }
