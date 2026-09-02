@@ -1,0 +1,20 @@
+{
+  "provinces": [
+    "Torino", "Milano", "Bergamo", "Brescia", "Varese", "Novara", "Cuneo", "Genova",
+    "Verona", "Vicenza", "Padova", "Treviso", "Venezia", "Udine",
+    "Bologna", "Modena", "Reggio Emilia", "Parma",
+    "Firenze", "Prato", "Pisa", "Roma", "Ancona", "Perugia",
+    "Napoli", "Bari", "Salerno", "Lecce", "Catania", "Palermo"
+  ],
+  "sectors": [
+    "Distribuzione",
+    "Servizi B2B",
+    "Software/Tech B2B",
+    "Logistica",
+    "Agenzie/Rappresentanza commerciale"
+  ],
+  "next_index": 0,
+  "cycle_count": 0,
+  "last_run_utc": null,
+  "last_province": null
+}
