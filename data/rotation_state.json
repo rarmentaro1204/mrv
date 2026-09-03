@@ -28,9 +28,9 @@
     "Logistica",
     "Agenzie/Rappresentanza commerciale"
   ],
-  "next_index": 6,
+  "next_index": 7,
   "cycle_count": 0,
-  "last_run_utc": "2026-09-03T03:17:19Z",
-  "last_province": "Asti",
+  "last_run_utc": "2026-09-03T04:30:00Z",
+  "last_province": "Alessandria",
   "note": "Ordine geografico Nord->Sud (Valle d'Aosta -> Sicilia), Sardegna in coda per completare la copertura di tutta Italia. 107 province totali."
 }
