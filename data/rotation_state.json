@@ -28,9 +28,9 @@
     "Logistica",
     "Agenzie/Rappresentanza commerciale"
   ],
-  "next_index": 13,
+  "next_index": 14,
   "cycle_count": 0,
-  "last_run_utc": "2026-09-04T02:29:00Z",
-  "last_province": "Savona",
+  "last_run_utc": "2026-09-04T03:16:00Z",
+  "last_province": "Varese",
   "note": "Ordine geografico Nord->Sud (Valle d'Aosta -> Sicilia), Sardegna in coda per completare la copertura di tutta Italia. 107 province totali."
 }
