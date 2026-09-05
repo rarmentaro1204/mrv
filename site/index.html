@@ -155,17 +155,20 @@
   .sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
   .sheet .brandmark-word{font-size:34px;color:var(--sheet-text)}
   .sheet .brandmark-sub{font-size:16px;color:var(--sheet-text);margin-top:2px}
-  .issuer-grid{margin-top:14px;display:flex;flex-direction:column;gap:6px;max-width:300px}
-  .issuer-line{display:flex;gap:8px}
+  .issuer-grid{margin-top:14px;display:flex;flex-direction:column;gap:6px;max-width:320px;min-width:0}
+  .issuer-line{display:flex;gap:8px;min-width:0}
   .issuer-input{
     flex:1;min-width:0;border:none;border-bottom:1px solid transparent;background:transparent;
     font-family:var(--font-mono);font-size:11px;color:var(--sheet-faint);padding:2px 1px;
     transition:border-color .15s ease;
+    overflow:hidden;text-overflow:ellipsis; /* mai testo tagliato senza indicazione */
   }
   .issuer-input.emph{color:var(--sheet-muted);font-weight:600}
   .issuer-input::placeholder{color:var(--sheet-faint);opacity:.55;font-style:italic}
   .issuer-input:hover, .issuer-input:focus{border-bottom-color:var(--sheet-line)}
   .issuer-input.small{max-width:52px;flex:0 0 52px}
+  .issuer-line.full{width:100%}
+  .issuer-line.full .issuer-input{flex:1 1 100%}
 
   .doc-meta{text-align:right}
   .doc-eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
@@ -198,6 +201,7 @@
   .field input, .field textarea{
     width:100%;border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
     font-family:var(--font-body);font-size:14.5px;color:var(--sheet-text);padding:4px 2px;
+    overflow:hidden;text-overflow:ellipsis;
   }
   .field input::placeholder, .field textarea::placeholder{color:var(--sheet-faint);font-style:italic}
   .field input:focus, .field textarea:focus{border-bottom-color:var(--gold)}
@@ -214,7 +218,29 @@
   .col-actions{width:32px}
   .svc-name-input{
     width:100%;border:none;background:transparent;font-family:var(--font-display);font-weight:600;
-    font-size:14px;color:var(--sheet-text);padding:2px 0;
+    font-size:14px;color:var(--sheet-text);padding:2px 0;overflow:hidden;text-overflow:ellipsis;
+  }
+
+  /* Sotto i 760px la tabella diventa una pila di card: niente più scroll
+     orizzontale né testo tagliato, ogni voce si legge per intero. */
+  @media (max-width:760px){
+    .table-wrap{overflow-x:visible;margin:0}
+    table.voci{min-width:0}
+    table.voci thead{display:none}
+    table.voci, table.voci tbody, table.voci tr, table.voci td{display:block;width:100%}
+    table.voci tr{
+      border:1px solid var(--sheet-line);border-radius:12px;padding:14px;margin-bottom:12px;position:relative;
+    }
+    table.voci tr:last-child{margin-bottom:0}
+    table.voci td{border-bottom:none;padding:7px 0}
+    table.voci td[data-label]::before{
+      content:attr(data-label);display:block;font-family:var(--font-mono);font-size:9.5px;
+      letter-spacing:.1em;text-transform:uppercase;color:var(--bronze);margin-bottom:4px;
+    }
+    table.voci td.col-actions{position:absolute;top:10px;right:10px;padding:0;width:auto}
+    .price-input-wrap, .subtotal{justify-content:flex-start;text-align:left}
+    .num-input{text-align:left}
+    .qty-input, .price-input{width:100%;max-width:140px}
   }
   .svc-cat{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--sheet-faint);margin-top:3px;text-transform:uppercase}
   .desc-input{
@@ -469,8 +495,10 @@
             <input class="issuer-input" id="hPiva" placeholder="P.IVA">
             <input class="issuer-input" id="hRea" placeholder="REA">
           </div>
-          <div class="issuer-line">
+          <div class="issuer-line full">
             <input class="issuer-input" id="hPec" placeholder="PEC" type="email">
+          </div>
+          <div class="issuer-line full">
             <input class="issuer-input" id="hEmail" placeholder="Email" type="email">
           </div>
         </div>
@@ -828,12 +856,12 @@
   function rigaRowHtml(r, idx){
     return `
       <tr data-rid="${r.rid}">
-        <td>
+        <td data-label="Servizio">
           <input class="svc-name-input" data-field="servizio" value="${escapeHtml(r.servizio)}" placeholder="Nome servizio">
           <div class="svc-cat">${escapeHtml(r.categoria||'Personalizzato')}</div>
         </td>
-        <td><textarea class="desc-input" data-field="descrizione" rows="1" placeholder="Descrizione del servizio">${escapeHtml(r.descrizione)}</textarea></td>
-        <td>
+        <td data-label="Descrizione"><textarea class="desc-input" data-field="descrizione" rows="1" placeholder="Descrizione del servizio">${escapeHtml(r.descrizione)}</textarea></td>
+        <td data-label="Tipo">
           <span class="select-wrap" data-tipo="${r.tipo}">
             <select class="tipo-select" data-field="tipo">
               <option value="una_tantum" ${r.tipo==='una_tantum'?'selected':''}>Una tantum</option>
@@ -842,11 +870,11 @@
             </select>
           </span>
         </td>
-        <td><input class="num-input qty-input" data-field="qty" type="number" min="1" step="1" value="${r.qty}"></td>
-        <td>
+        <td data-label="Q.tà"><input class="num-input qty-input" data-field="qty" type="number" min="1" step="1" value="${r.qty}"></td>
+        <td data-label="Prezzo">
           <div class="price-input-wrap"><span class="cur">€</span><input class="num-input price-input" data-field="prezzo" type="number" min="0" step="1" value="${r.prezzo}"></div>
         </td>
-        <td class="subtotal">${eur((Number(r.prezzo)||0)*(Number(r.qty)||0))}</td>
+        <td class="subtotal" data-label="Subtotale">${eur((Number(r.prezzo)||0)*(Number(r.qty)||0))}</td>
         <td class="col-actions no-print"><button class="row-remove" data-remove="${r.rid}" title="Rimuovi riga">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
         </button></td>
