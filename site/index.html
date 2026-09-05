@@ -421,6 +421,12 @@
 
   .badge-count{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-muted)}
 
+  .build-tag{
+    position:fixed;left:8px;bottom:8px;z-index:130;font-family:var(--font-mono);font-size:9px;
+    color:var(--text-muted);opacity:.55;background:var(--panel-bg);border:1px solid var(--border);
+    border-radius:6px;padding:2px 6px;pointer-events:none;
+  }
+
   /* ---------- Print ---------- */
   @media print{
     @page{ size:A4; margin:12mm 14mm; }
@@ -597,6 +603,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="build-tag no-print" id="buildTag"></div>
 
 <!-- Catalog modal -->
 <div class="overlay no-print" id="catalogOverlay">
@@ -621,6 +628,12 @@
 <script>
 (function(){
   "use strict";
+
+  // Marcatore di versione: serve solo a verificare che il deploy visualizzato
+  // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
+  const BUILD_ID = 'build-2026-09-05-19:40-wrap-fix';
+  console.log('[MRV Preventivi]', BUILD_ID);
+  { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
   /* ---------------- Helpers ---------------- */
   const $ = (id) => document.getElementById(id);
