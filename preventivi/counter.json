@@ -1,0 +1,5 @@
+{
+  "nextNumber": 1,
+  "note": "Copia di backup del contatore vivo, che risiede nel database dell'artifact MRV Preventivi (doc meta/counter). Questo file viene aggiornato dalla routine di sincronizzazione e non va modificato a mano: in caso di conflitto vince il valore nell'artifact.",
+  "lastSyncedAt": null
+}
