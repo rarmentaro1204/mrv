@@ -1,0 +1,1364 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%A7%BE%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:ital,wght@0,700;0,900;1,500;1,600&display=swap">
+<title>MRV Preventivi</title>
+<style>
+  /* ============================================================
+     TOKENS
+     Il "foglio" (documento/preventivo) simula carta stampata: usa
+     un set di token FISSI (--sheet-*) che non seguono il tema del
+     viewer, esattamente come un foglio di carta resta bianco sia
+     che tu lo guardi di giorno o di notte. Il "chrome" applicativo
+     (toolbar, modali, drawer, sfondo pagina) invece segue il tema.
+     ============================================================ */
+  :root{
+    /* Brand — accento */
+    --gold:#CBAA66; --gold-soft:#E0C58A; --bronze:#8B7339;
+    /* Brand — fondi scuri (sempre ink, il chrome MRV è sempre scuro) */
+    --ink:#070B14; --ink-soft:#0D1526; --ink-line:#1E293B;
+    --white:#F8FAFC; --slate:#94A3B8; --slate-deep:#475569;
+
+    /* Chrome applicativo — tema chiaro (default) */
+    --page-bg:#F4F1EA;
+    --panel-bg:#FFFFFF;
+    --panel-bg-soft:#F4F1EA;
+    --text:#070B14;
+    --text-muted:#475569;
+    --border:#D6CFBE;
+    --toolbar-bg:#070B14;
+    --toolbar-text:#F8FAFC;
+    --shadow-dark:0 18px 50px -12px rgba(7,11,20,.28);
+    --shadow-gold:0 12px 30px -10px rgba(203,170,102,.35);
+
+    /* Il foglio — sempre carta, non segue il tema */
+    --sheet-bg:#FFFFFF;
+    --sheet-text:#12161F;
+    --sheet-muted:#4B5568;
+    --sheet-faint:#8A93A3;
+    --sheet-line:#E2DECF;
+    --sheet-soft:#F6F3EC;
+
+    --font-display:'Montserrat',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+    --font-logo:'Playfair Display',serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#0B1220;
+      --panel-bg:#0D1526;
+      --panel-bg-soft:#111B30;
+      --text:#F8FAFC;
+      --text-muted:#94A3B8;
+      --border:#1E293B;
+      --shadow-dark:0 18px 50px -12px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#0B1220; --panel-bg:#0D1526; --panel-bg-soft:#111B30;
+    --text:#F8FAFC; --text-muted:#94A3B8; --border:#1E293B;
+    --shadow-dark:0 18px 50px -12px rgba(0,0,0,.7);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--page-bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+  }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} }
+
+  a{color:inherit}
+  button{font:inherit;cursor:pointer}
+  input,textarea,select{font:inherit;color:inherit}
+  ::selection{background:rgba(203,170,102,.35)}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+
+  .pinstripe{
+    background-image:repeating-linear-gradient(135deg, transparent 0 8px, rgba(203,170,102,.07) 8px 9px);
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{
+    position:sticky; top:0; z-index:50;
+    background:var(--toolbar-bg); color:var(--toolbar-text);
+    border-bottom:1px solid var(--ink-line);
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:0 20px; height:64px;
+  }
+  .toolbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+  .toolbar-right{display:flex;align-items:center;gap:8px}
+  .brandmark{line-height:1;display:flex;flex-direction:column;gap:1px}
+  .brandmark-word{font-family:var(--font-logo);font-weight:900;letter-spacing:-.01em}
+  .brandmark-word .dot{color:var(--gold)}
+  .brandmark-sub{font-family:var(--font-logo);font-style:italic;font-weight:500;letter-spacing:.02em}
+  .toolbar .brandmark-word{font-size:22px;color:var(--white)}
+  .toolbar .brandmark-sub{font-size:11px;color:var(--slate)}
+  .toolbar-tag{
+    font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--gold);border-left:1px solid var(--ink-line);
+    padding-left:14px; white-space:nowrap;
+  }
+  @media (max-width:620px){ .toolbar-tag{display:none} }
+
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    border-radius:14px;border:1px solid transparent;
+    font-family:var(--font-display);font-weight:600;font-size:13px;
+    padding:10px 16px; white-space:nowrap;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-gold{background:var(--gold);color:#1A1406;box-shadow:var(--shadow-gold)}
+  .btn-gold:hover{background:var(--gold-soft)}
+  .btn-ghost-dark{background:transparent;color:var(--white);border-color:var(--ink-line)}
+  .btn-ghost-dark:hover{background:var(--ink-soft)}
+  .btn-outline{background:transparent;color:var(--text);border-color:var(--border)}
+  .btn-outline:hover{background:var(--panel-bg-soft)}
+  .btn-text{background:transparent;color:var(--text-muted);padding:10px 10px}
+  .btn-text:hover{color:var(--text)}
+  .btn-sm{padding:7px 12px;font-size:12px;border-radius:11px}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;box-shadow:none}
+  .btn .count{
+    background:var(--gold);color:#1A1406;border-radius:999px;font-family:var(--font-mono);
+    font-size:10px;font-weight:700;padding:1px 6px;line-height:1.4;
+  }
+  .btn-ghost-dark .count{background:var(--ink-line);color:var(--white)}
+
+  .icon{width:15px;height:15px;flex:none}
+
+  /* ---------- Layout ---------- */
+  .page-wrap{max-width:900px;margin:0 auto;padding:36px 20px 140px}
+  .banner{
+    display:flex;align-items:center;gap:10px;justify-content:space-between;
+    background:var(--panel-bg-soft);border:1px solid var(--border);border-radius:12px;
+    padding:11px 16px;margin-bottom:20px;font-size:13px;color:var(--text-muted);
+  }
+  .banner strong{color:var(--text);font-weight:600}
+  .banner button{background:none;border:none;color:var(--text-muted);text-decoration:underline;font-size:12px}
+
+  .sheet{
+    background:var(--sheet-bg);
+    border-radius:18px;
+    box-shadow:var(--shadow-dark);
+    padding:52px 56px;
+    color:var(--sheet-text);
+  }
+  @media (max-width:640px){ .sheet{padding:32px 22px} }
+
+  .sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
+  .sheet .brandmark-word{font-size:34px;color:var(--sheet-text)}
+  .sheet .brandmark-sub{font-size:16px;color:var(--sheet-text);margin-top:2px}
+  .issuer-grid{margin-top:14px;display:flex;flex-direction:column;gap:6px;max-width:300px}
+  .issuer-line{display:flex;gap:8px}
+  .issuer-input{
+    flex:1;min-width:0;border:none;border-bottom:1px solid transparent;background:transparent;
+    font-family:var(--font-mono);font-size:11px;color:var(--sheet-faint);padding:2px 1px;
+    transition:border-color .15s ease;
+  }
+  .issuer-input.emph{color:var(--sheet-muted);font-weight:600}
+  .issuer-input::placeholder{color:var(--sheet-faint);opacity:.55;font-style:italic}
+  .issuer-input:hover, .issuer-input:focus{border-bottom-color:var(--sheet-line)}
+  .issuer-input.small{max-width:52px;flex:0 0 52px}
+
+  .doc-meta{text-align:right}
+  .doc-eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
+  .doc-number{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:-.02em;margin-top:4px}
+  .doc-number.draft{color:var(--sheet-faint);font-style:italic;font-weight:600;font-size:18px}
+  .meta-rows{margin-top:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .meta-row{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .meta-row label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sheet-faint)}
+  .meta-row input[type="date"]{
+    border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
+    font-family:var(--font-mono);font-size:12.5px;color:var(--sheet-text);padding:2px 2px;text-align:right;
+  }
+
+  .divider{height:1px;background:var(--sheet-line);margin:34px 0}
+
+  .eyebrow{
+    font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.28em;
+    text-transform:uppercase;color:var(--bronze);margin-bottom:16px;display:flex;align-items:center;gap:10px;
+  }
+  .eyebrow .line{height:1px;background:var(--sheet-line);flex:1}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+  .section-head .eyebrow{margin-bottom:0}
+  .section-actions{display:flex;gap:8px}
+
+  /* cliente grid */
+  .cliente-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 28px}
+  @media (max-width:560px){ .cliente-grid{grid-template-columns:1fr} }
+  .field label{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sheet-faint);margin-bottom:5px}
+  .field input, .field textarea{
+    width:100%;border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
+    font-family:var(--font-body);font-size:14.5px;color:var(--sheet-text);padding:4px 2px;
+  }
+  .field input::placeholder, .field textarea::placeholder{color:var(--sheet-faint);font-style:italic}
+  .field input:focus, .field textarea:focus{border-bottom-color:var(--gold)}
+
+  /* table */
+  .table-wrap{overflow-x:auto;margin:0 -4px}
+  table.voci{border-collapse:collapse;width:100%;min-width:740px}
+  table.voci thead th{
+    text-align:left;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--bronze);padding:0 10px 10px;border-bottom:1px solid var(--sheet-line);
+  }
+  table.voci td{padding:14px 10px;border-bottom:1px solid var(--sheet-line);vertical-align:top}
+  table.voci tr:last-child td{border-bottom:1px solid var(--sheet-line)}
+  .col-actions{width:32px}
+  .svc-name-input{
+    width:100%;border:none;background:transparent;font-family:var(--font-display);font-weight:600;
+    font-size:14px;color:var(--sheet-text);padding:2px 0;
+  }
+  .svc-cat{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--sheet-faint);margin-top:3px;text-transform:uppercase}
+  .desc-input{
+    width:100%;min-width:220px;border:none;background:transparent;resize:none;overflow:hidden;
+    font-family:var(--font-body);font-size:13px;color:var(--sheet-muted);line-height:1.5;padding:2px 0;
+  }
+  .select-wrap{position:relative;display:inline-block}
+  .select-wrap::after{
+    content:'';position:absolute;right:9px;top:50%;width:5px;height:5px;
+    border-right:1.4px solid currentColor;border-bottom:1.4px solid currentColor;
+    transform:translateY(-70%) rotate(45deg);pointer-events:none;opacity:.55;
+  }
+  select.tipo-select{
+    font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+    padding:5px 22px 5px 20px;border-radius:999px;border:1px solid;appearance:none;-webkit-appearance:none;
+    background:transparent;position:relative;
+  }
+  .select-wrap::before{
+    content:'';position:absolute;left:9px;top:50%;width:6px;height:6px;border-radius:50%;transform:translateY(-50%);
+  }
+  .select-wrap[data-tipo="una_tantum"]{color:var(--bronze)}
+  .select-wrap[data-tipo="una_tantum"]::before{background:var(--gold)}
+  .select-wrap[data-tipo="una_tantum"] select{background-color:rgba(203,170,102,.14);border-color:rgba(203,170,102,.4)}
+  .select-wrap[data-tipo="mensile"]{color:var(--bronze)}
+  .select-wrap[data-tipo="mensile"]::before{background:var(--bronze)}
+  .select-wrap[data-tipo="mensile"] select{background-color:rgba(139,115,57,.09);border-color:rgba(139,115,57,.32)}
+  .select-wrap[data-tipo="annuale"]{color:var(--slate-deep)}
+  .select-wrap[data-tipo="annuale"]::before{background:var(--slate-deep)}
+  .select-wrap[data-tipo="annuale"] select{background-color:rgba(71,85,105,.08);border-color:rgba(71,85,105,.3)}
+
+  .num-input{
+    border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
+    font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--sheet-text);
+    padding:4px 2px;text-align:right;
+  }
+  .qty-input{width:44px}
+  .price-input{width:84px}
+  .price-input-wrap{display:flex;align-items:baseline;gap:4px;justify-content:flex-end}
+  .price-input-wrap .cur{font-family:var(--font-mono);font-size:11px;color:var(--sheet-faint)}
+  .subtotal{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:13.5px;text-align:right;white-space:nowrap}
+
+  .row-remove{
+    background:none;border:none;color:var(--sheet-faint);width:24px;height:24px;border-radius:7px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .row-remove:hover{background:var(--sheet-soft);color:#B4433B}
+
+  .empty-rows{padding:30px 10px;text-align:center;color:var(--sheet-faint);font-size:13px;font-family:var(--font-body)}
+
+  .table-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+
+  /* totals */
+  .totals-wrap{display:flex;justify-content:flex-end;margin-top:8px}
+  .totals-box{width:min(340px,100%);background:var(--sheet-soft);border-radius:14px;padding:20px 22px}
+  .totals-row{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;padding:6px 0;color:var(--sheet-muted)}
+  .totals-row .label{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  .totals-row .val{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-weight:700;color:var(--sheet-text);font-size:14.5px}
+  .totals-row .cadence{color:var(--sheet-faint);font-size:11px;margin-left:4px}
+  .totals-sep{height:1px;background:var(--sheet-line);margin:10px 0}
+  .iva-select-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+  .iva-select-row label{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--sheet-faint)}
+  .iva-select{
+    border:1px solid var(--sheet-line);background:var(--sheet-bg);border-radius:8px;font-size:12px;
+    padding:6px 8px;color:var(--sheet-text);max-width:220px;
+  }
+  .iva-note{font-size:10.5px;color:var(--sheet-faint);margin-top:10px;line-height:1.5}
+
+  .notes-area{
+    width:100%;border:none;background:transparent;resize:none;overflow:hidden;
+    font-family:var(--font-body);font-size:13.5px;color:var(--sheet-muted);line-height:1.7;
+    border-top:1px solid var(--sheet-line);padding-top:14px;
+  }
+
+  .sheet-footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--sheet-line);text-align:center}
+  .footer-legal-input{
+    width:100%;border:none;background:transparent;resize:none;overflow:hidden;text-align:center;
+    font-family:var(--font-mono);font-size:10px;color:var(--sheet-faint);letter-spacing:.02em;line-height:1.9;
+    padding:3px 4px;border-radius:8px;transition:background .15s ease;
+  }
+  .footer-legal-input:hover, .footer-legal-input:focus{background:var(--sheet-soft)}
+  .footer-hint{margin-top:8px;text-align:center;font-size:10.5px;color:var(--sheet-faint)}
+  .footer-hint button{background:none;border:none;color:var(--bronze);text-decoration:underline;font-size:10.5px;padding:0}
+
+  /* ---------- FAB bar ---------- */
+  .fab-bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;
+    display:flex;justify-content:center;padding:16px 20px calc(16px + env(safe-area-inset-bottom));
+    pointer-events:none;
+  }
+  .fab-inner{
+    pointer-events:auto;display:flex;align-items:center;gap:10px;
+    background:var(--toolbar-bg);border:1px solid var(--ink-line);border-radius:16px;
+    padding:10px;box-shadow:var(--shadow-dark);
+  }
+  @media (max-width:560px){ .fab-inner{flex-wrap:wrap;justify-content:center} }
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(10px);
+    background:var(--ink);color:var(--white);border:1px solid var(--ink-line);
+    font-family:var(--font-display);font-weight:600;font-size:13px;
+    padding:11px 18px;border-radius:12px;box-shadow:var(--shadow-dark);
+    z-index:120;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* ---------- overlay / modal / drawer ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(7,11,20,.55);backdrop-filter:blur(2px);
+    z-index:100;display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .overlay.open{display:flex}
+  .modal{
+    background:var(--panel-bg);color:var(--text);border-radius:18px;box-shadow:var(--shadow-dark);
+    width:min(560px,100%);max-height:85vh;display:flex;flex-direction:column;border:1px solid var(--border);
+  }
+  .modal.wide{width:min(720px,100%)}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+  .modal-head h2{font-family:var(--font-display);font-size:17px;font-weight:700;margin:0}
+  .modal-close{background:none;border:none;color:var(--text-muted);width:28px;height:28px;border-radius:8px}
+  .modal-close:hover{background:var(--panel-bg-soft);color:var(--text)}
+  .modal-body{padding:22px 24px;overflow-y:auto}
+  .modal-foot{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+  .form-grid.full > *{grid-column:1 / -1}
+  @media (max-width:480px){ .form-grid{grid-template-columns:1fr} }
+  .form-field label{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+  .form-field input, .form-field select, .form-field textarea{
+    width:100%;border:1px solid var(--border);background:var(--panel-bg-soft);border-radius:10px;
+    padding:9px 11px;font-size:13.5px;color:var(--text);
+  }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus{border-color:var(--gold)}
+  .form-hint{font-size:11.5px;color:var(--text-muted);margin-top:14px;line-height:1.6}
+
+  .drawer-overlay{position:fixed;inset:0;background:rgba(7,11,20,.5);z-index:95;display:none}
+  .drawer-overlay.open{display:block}
+  .drawer{
+    position:fixed;top:0;right:0;bottom:0;width:min(400px,100%);background:var(--panel-bg);color:var(--text);
+    z-index:96;box-shadow:-18px 0 50px -12px rgba(0,0,0,.4);
+    transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column;
+  }
+  .drawer.open{transform:translateX(0)}
+  .drawer-head{display:flex;align-items:center;justify-content:space-between;padding:20px;border-bottom:1px solid var(--border)}
+  .drawer-head h2{font-family:var(--font-display);font-size:16px;margin:0}
+  .drawer-body{flex:1;overflow-y:auto;padding:14px}
+  .quote-card{
+    background:var(--panel-bg-soft);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;
+  }
+  .quote-card .qnum{font-family:var(--font-mono);font-size:11px;color:var(--bronze);font-weight:700;letter-spacing:.05em}
+  .quote-card .qclient{font-family:var(--font-display);font-weight:700;font-size:14.5px;margin-top:3px}
+  .quote-card .qmeta{font-size:12px;color:var(--text-muted);margin-top:4px}
+  .quote-card .qtotal{font-family:var(--font-mono);font-weight:700;margin-top:8px;font-size:13px}
+  .quote-card .qactions{display:flex;gap:8px;margin-top:10px}
+  .drawer-empty{padding:30px 10px;text-align:center;color:var(--text-muted);font-size:13px}
+  .drawer-source{
+    font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);
+    padding:8px 10px;margin-bottom:10px;background:var(--panel-bg-soft);border-radius:9px;
+  }
+
+  /* catalog modal */
+  .cat-group-title{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--bronze);margin:18px 0 8px}
+  .cat-group-title:first-child{margin-top:0}
+  .cat-item{
+    display:flex;gap:12px;align-items:flex-start;padding:11px 8px;border-radius:10px;border:1px solid transparent;
+  }
+  .cat-item:hover{background:var(--panel-bg-soft)}
+  .cat-item input[type="checkbox"]{margin-top:3px;width:16px;height:16px;accent-color:var(--gold)}
+  .cat-item .ci-body{flex:1;min-width:0}
+  .cat-item .ci-name{font-family:var(--font-display);font-weight:600;font-size:13.5px}
+  .cat-item .ci-desc{font-size:12px;color:var(--text-muted);margin-top:2px;line-height:1.5}
+  .cat-item .ci-meta{display:flex;align-items:center;gap:8px;margin-top:6px}
+  .cat-item .ci-price{font-family:var(--font-mono);font-weight:700;font-size:12.5px;white-space:nowrap}
+  .cat-item .ci-del{background:none;border:none;color:var(--text-muted);width:26px;height:26px;border-radius:7px;flex:none}
+  .cat-item .ci-del:hover{background:var(--panel-bg-soft);color:#B4433B}
+  .cat-add-form{border-top:1px dashed var(--border);margin-top:16px;padding-top:16px}
+
+  .badge-count{font-family:var(--font-mono);font-size:10px;font-weight:700;color:var(--text-muted)}
+
+  /* ---------- Print ---------- */
+  @media print{
+    @page{ size:A4; margin:12mm 14mm; }
+    body{background:#fff}
+    .toolbar, .fab-bar, .overlay, .drawer, .drawer-overlay, .toast, .banner, .no-print{display:none!important}
+    .page-wrap{padding:0;max-width:none}
+    .sheet{box-shadow:none;border-radius:0;padding:0}
+    .field input, .field textarea, .num-input, .desc-input, .svc-name-input, .notes-area, .meta-row input, .iva-select, select.tipo-select{
+      border:none!important;background:transparent!important;color:inherit!important;
+    }
+    .select-wrap::after{display:none}
+    table.voci{min-width:0}
+    .table-wrap{overflow:visible}
+  }
+
+  /* ---------- PDF capture mode (mirrors print, scoped to #sheet) ---------- */
+  #sheet.pdf-capture .no-print{display:none!important}
+  #sheet.pdf-capture input, #sheet.pdf-capture textarea, #sheet.pdf-capture select{
+    border-color:transparent!important;background:transparent!important;
+  }
+  #sheet.pdf-capture .select-wrap::after{display:none}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+<div class="toolbar pinstripe">
+  <div class="toolbar-left">
+    <div class="brandmark">
+      <div class="brandmark-word">MRV<span class="dot">.</span></div>
+      <div class="brandmark-sub">Consulting</div>
+    </div>
+    <div class="toolbar-tag">Preventivi</div>
+  </div>
+  <div class="toolbar-right">
+    <button class="btn btn-ghost-dark btn-sm no-print" id="btnDrawer" title="Preventivi salvati">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18M3 12h18M3 17h12"/></svg>
+      <span class="hide-sm">Salvati</span>
+      <span class="count no-print" id="savedCount" style="display:none">0</span>
+    </button>
+    <button class="btn btn-gold btn-sm no-print" id="btnPdfTop">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      Genera PDF
+    </button>
+  </div>
+</div>
+
+<div class="page-wrap">
+  <div class="banner no-print" id="demoBanner">
+    <span>📄 Anteprima con <strong>dati di esempio</strong> — modifica i campi qui sotto o premi «Nuovo preventivo» per iniziare da un foglio vuoto.</span>
+    <button id="btnDismissBanner">Nascondi</button>
+  </div>
+
+  <div class="sheet" id="sheet">
+    <div class="sheet-head">
+      <div>
+        <div class="brandmark">
+          <div class="brandmark-word">MRV<span class="dot">.</span></div>
+          <div class="brandmark-sub">Consulting</div>
+        </div>
+        <div class="issuer-grid" id="issuerGrid">
+          <div class="issuer-line">
+            <input class="issuer-input emph" id="hTitolare" placeholder="Titolare">
+            <input class="issuer-input" id="hForma" placeholder="Forma giuridica">
+          </div>
+          <input class="issuer-input" id="hIndirizzo" placeholder="Indirizzo">
+          <div class="issuer-line">
+            <input class="issuer-input small" id="hCap" placeholder="CAP">
+            <input class="issuer-input" id="hComune" placeholder="Comune">
+            <input class="issuer-input small" id="hProvincia" placeholder="Prov.">
+          </div>
+          <div class="issuer-line">
+            <input class="issuer-input" id="hPiva" placeholder="P.IVA">
+            <input class="issuer-input" id="hRea" placeholder="REA">
+          </div>
+          <div class="issuer-line">
+            <input class="issuer-input" id="hPec" placeholder="PEC" type="email">
+            <input class="issuer-input" id="hEmail" placeholder="Email" type="email">
+          </div>
+        </div>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-eyebrow">Preventivo</div>
+        <div class="doc-number" id="docNumber">BOZZA</div>
+        <div class="meta-rows">
+          <div class="meta-row">
+            <label for="dataEmissione">Data</label>
+            <input type="date" id="dataEmissione">
+          </div>
+          <div class="meta-row">
+            <label for="dataValidita">Valido fino al</label>
+            <input type="date" id="dataValidita">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow"><span>Cliente</span><span class="line"></span></div>
+    <div class="cliente-grid">
+      <div class="field"><label for="cRagione">Ragione sociale / Nome</label><input id="cRagione" placeholder="Es. Rossi S.r.l."></div>
+      <div class="field"><label for="cPiva">P.IVA / Codice fiscale</label><input id="cPiva" placeholder="00000000000"></div>
+      <div class="field"><label for="cIndirizzo">Indirizzo</label><input id="cIndirizzo" placeholder="Via, numero civico"></div>
+      <div class="field"><label for="cCitta">CAP, Città (Prov.)</label><input id="cCitta" placeholder="10121 Torino (TO)"></div>
+      <div class="field"><label for="cEmail">Email referente</label><input id="cEmail" placeholder="nome@azienda.it" type="email"></div>
+      <div class="field"><label for="cTelefono">Telefono</label><input id="cTelefono" placeholder="+39 ..." type="tel"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-head">
+      <div class="eyebrow" style="margin-bottom:0"><span>Servizi</span></div>
+      <div class="section-actions no-print">
+        <button class="btn btn-outline btn-sm" id="btnCatalog">+ Dal catalogo</button>
+        <button class="btn btn-outline btn-sm" id="btnCustomRow">+ Riga libera</button>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="voci">
+        <colgroup>
+          <col style="width:19%"><col style="width:31%"><col style="width:13%">
+          <col style="width:7%"><col style="width:12%"><col style="width:12%"><col style="width:6%">
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Servizio</th><th>Descrizione</th><th>Tipo</th><th>Q.tà</th><th>Prezzo</th><th>Subtot.</th><th class="no-print"></th>
+          </tr>
+        </thead>
+        <tbody id="righeBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyRows" class="empty-rows" style="display:none">Nessuna voce inserita. Aggiungi un servizio dal catalogo o una riga libera.</div>
+
+    <div class="totals-wrap">
+      <div class="totals-box">
+        <div class="iva-select-row no-print">
+          <label for="regimeIva">Regime IVA</label>
+          <select class="iva-select" id="regimeIva">
+            <option value="forfettario">Esente — regime forfettario</option>
+            <option value="esclusa">IVA 22% esclusa</option>
+            <option value="inclusa">IVA 22% inclusa</option>
+          </select>
+        </div>
+        <div id="totalsRows"></div>
+        <div class="iva-note" id="ivaNote"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow"><span>Note e condizioni</span><span class="line"></span></div>
+    <textarea class="notes-area" id="note" rows="3"></textarea>
+
+    <div class="sheet-footer">
+      <textarea class="footer-legal-input" id="footerLegal" rows="1"></textarea>
+      <div class="footer-hint no-print">Testo modificabile liberamente · <button type="button" id="btnResetFooter">rigenera dai dati aziendali</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="fab-bar no-print">
+  <div class="fab-inner">
+    <button class="btn btn-ghost-dark btn-sm" id="btnNew">Nuovo</button>
+    <button class="btn btn-outline btn-sm" id="btnSave" style="background:transparent;color:var(--white);border-color:var(--ink-line)">Salva preventivo</button>
+    <button class="btn btn-gold" id="btnPdfBottom">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      Genera PDF
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Catalog modal -->
+<div class="overlay no-print" id="catalogOverlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2>Catalogo servizi</h2><button class="modal-close" id="closeCatalog">✕</button></div>
+    <div class="modal-body" id="catalogBody"></div>
+    <div class="modal-foot">
+      <span class="badge-count" id="catSelCount" style="margin-right:auto">0 selezionati</span>
+      <button class="btn btn-outline btn-sm" id="cancelCatalog">Chiudi</button>
+      <button class="btn btn-gold btn-sm" id="addSelectedCatalog">Aggiungi selezionati</button>
+    </div>
+  </div>
+</div>
+
+<!-- Saved quotes drawer -->
+<div class="drawer-overlay no-print" id="drawerOverlay"></div>
+<div class="drawer no-print" id="drawer">
+  <div class="drawer-head"><h2>Preventivi salvati</h2><button class="modal-close" id="closeDrawer">✕</button></div>
+  <div class="drawer-body" id="drawerBody"><div class="drawer-empty">Caricamento…</div></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- Helpers ---------------- */
+  const $ = (id) => document.getElementById(id);
+  const eur = (n) => new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n)||0);
+  const escapeHtml = (s) => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const uid = () => 'r' + Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const addDays = (iso, days) => { const d = new Date(iso+'T00:00:00'); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); };
+
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove('show'), 2600);
+  }
+
+  function autoGrow(el){ if(!el) return; el.style.height='auto'; el.style.height = (el.scrollHeight)+'px'; }
+  document.addEventListener('input', (e) => { if(e.target.tagName==='TEXTAREA') autoGrow(e.target); });
+
+  /* ---------------- Defaults (used when db is unavailable) ---------------- */
+  const DEFAULT_COMPANY = {
+    ragioneSociale:'MRV Consulting', titolare:'Roberto Armentaro', formaGiuridica:'Impresa individuale',
+    indirizzo:'Via dei Ronchi 27', cap:'10091', comune:'Alpignano', provincia:'TO',
+    piva:'12494340016', cf:'RMNRRT95D12L219F', rea:'TO-1295142',
+    pec:'robertoarmentaro@pec.it', email:'', telefono:'', sitoWeb:'mrvconsulting.it', iban:'',
+  };
+
+  const DEFAULT_CATALOG = [
+    {id:'svc-01', categoria:'Setup & avvio', nome:'Analisi processi e raccolta requisiti', descrizione:"Mappatura dei flussi operativi e definizione del perimetro del progetto.", tipo:'una_tantum', prezzo:900},
+    {id:'svc-02', categoria:'Setup & avvio', nome:'Progettazione architettura CRM/ERP', descrizione:'Disegno del modello dati e dell’infrastruttura backend proprietaria.', tipo:'una_tantum', prezzo:1400},
+    {id:'svc-03', categoria:'Sviluppo su misura', nome:'Sviluppo CRM su misura', descrizione:'Gestione contatti, pipeline commerciale e attività, costruito sui vostri processi.', tipo:'una_tantum', prezzo:4500},
+    {id:'svc-04', categoria:'Sviluppo su misura', nome:'Sviluppo modulo ERP', descrizione:'Magazzino, fatturazione e produzione integrati con il CRM.', tipo:'una_tantum', prezzo:5200},
+    {id:'svc-05', categoria:'Sviluppo su misura', nome:'Integrazione IA sui dati aziendali', descrizione:'Assistente IA addestrato sui dati e documenti della vostra azienda.', tipo:'una_tantum', prezzo:2800},
+    {id:'svc-06', categoria:'Sviluppo su misura', nome:'Migrazione dati da sistema esistente', descrizione:'Importazione e bonifica dei dati dal gestionale attuale.', tipo:'una_tantum', prezzo:1100},
+    {id:'svc-07', categoria:'Canone & assistenza', nome:'Hosting e manutenzione applicativa', descrizione:'Infrastruttura cloud dedicata, backup giornalieri, monitoraggio.', tipo:'mensile', prezzo:180},
+    {id:'svc-08', categoria:'Canone & assistenza', nome:'Assistenza tecnica prioritaria', descrizione:'Supporto diretto con SLA di risposta entro 4 ore lavorative.', tipo:'mensile', prezzo:150},
+    {id:'svc-09', categoria:'Canone & assistenza', nome:'Evoluzione e nuove funzionalità', descrizione:'Sviluppo continuativo di nuove funzionalità pianificate insieme a voi.', tipo:'annuale', prezzo:3600},
+    {id:'svc-10', categoria:'Extra', nome:'Formazione del team', descrizione:'Sessione di formazione operativa per gli utenti del sistema.', tipo:'una_tantum', prezzo:450},
+    {id:'svc-11', categoria:'Extra', nome:'Integrazione con servizi terzi', descrizione:'Collegamento API con software di fatturazione, e-commerce o marketplace.', tipo:'una_tantum', prezzo:900},
+  ];
+
+  const DEFAULT_NOTE = "Il preventivo ha validità 30 giorni dalla data di emissione. Modalità di pagamento: 50% all'avvio del progetto, 50% alla consegna. I canoni ricorrenti vengono fatturati anticipatamente con cadenza mensile/annuale a partire dal mese di attivazione del servizio.";
+
+  const TIPO_LABEL = {una_tantum:'Una tantum', mensile:'Mensile', annuale:'Annuale'};
+
+  /* ---------------- Backend Google Sheets (per l'uso fuori da Claude) ----------------
+     Dentro l'anteprima Claude il tool usa il proprio database (claude.use('db')).
+     Fuori da Claude (es. self-hosted su Netlify) usa invece questo Google Apps Script,
+     così la cronologia/numerazione restano condivise tra i soci. Vedi
+     scripts/google-apps-script/README.md per come crearlo e distribuirlo. */
+  const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbzjJeWMzCraHFvFG8Gf-8tS0AnVnyBETqLBJ2s0LxQ-fnIYOKQukLnun6bCnfnzKrcIKA/exec';
+  const SHEETS_API_TOKEN = 'MatteoRobertoVittorio2026!';
+
+  function sheetsConfigured(){
+    return SHEETS_API_URL && SHEETS_API_URL.indexOf('INCOLLA_QUI') === -1;
+  }
+
+  const sheetsApi = {
+    async call(action, params, isPost){
+      if(isPost){
+        const res = await fetch(SHEETS_API_URL, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'}, // evita il preflight CORS
+          body: JSON.stringify({action, token:SHEETS_API_TOKEN, ...params}),
+        });
+        var json = await res.json();
+      } else {
+        const url = new URL(SHEETS_API_URL);
+        url.searchParams.set('action', action);
+        url.searchParams.set('token', SHEETS_API_TOKEN);
+        Object.entries(params||{}).forEach(([k,v])=>{ if(v!=null) url.searchParams.set(k, v); });
+        const res = await fetch(url.toString());
+        var json = await res.json();
+      }
+      if(!json.ok) throw new Error(json.error || 'Errore backend Google Sheets');
+      return json.result;
+    },
+    nextNumber: (year) => sheetsApi.call('nextNumber', {year}, false),
+    saveQuote: (quote) => sheetsApi.call('saveQuote', {quote}, true),
+    listQuotes: () => sheetsApi.call('listQuotes', {}, false),
+    deleteQuote: (id) => sheetsApi.call('deleteQuote', {id}, true),
+    getSettings: () => sheetsApi.call('getSettings', {}, false),
+    saveSettings: (company) => sheetsApi.call('saveSettings', {company}, true),
+  };
+
+  // 'claude' = database interno artifact · 'sheets' = Google Sheets · 'none' = nessuna persistenza condivisa
+  let backendType = 'none';
+
+  /* ---------------- State ---------------- */
+  const state = {
+    dbReady:false,
+    company: {...DEFAULT_COMPANY},
+    catalog: DEFAULT_CATALOG.map(s=>({...s})),
+    quote: null,     // current quote being edited
+    savedQuotes: [],
+    lastSavedSnapshot: null,
+  };
+
+  function blankQuote(demo){
+    if(demo){
+      return {
+        _id:null, number:null,
+        dataEmissione: todayISO(), dataValidita: addDays(todayISO(),30),
+        cliente:{ ragione:'Esempio S.r.l. (dati di esempio)', piva:'00000000000', indirizzo:'Via Esempio 1', citta:'20121 Milano (MI)', email:'info@esempio.it', telefono:'+39 02 0000000' },
+        righe:[
+          {rid:uid(), servizio:'Analisi processi e raccolta requisiti', categoria:'Setup & avvio', descrizione:'Mappatura dei flussi operativi e definizione del perimetro del progetto.', tipo:'una_tantum', qty:1, prezzo:900},
+          {rid:uid(), servizio:'Sviluppo CRM su misura', categoria:'Sviluppo su misura', descrizione:'Gestione contatti, pipeline commerciale e attività, costruito sui vostri processi.', tipo:'una_tantum', qty:1, prezzo:4500},
+          {rid:uid(), servizio:'Hosting e manutenzione applicativa', categoria:'Canone & assistenza', descrizione:'Infrastruttura cloud dedicata, backup giornalieri, monitoraggio.', tipo:'mensile', qty:1, prezzo:180},
+          {rid:uid(), servizio:'Assistenza tecnica prioritaria', categoria:'Canone & assistenza', descrizione:'Supporto diretto con SLA di risposta entro 4 ore lavorative.', tipo:'mensile', qty:1, prezzo:150},
+        ],
+        note: DEFAULT_NOTE, regimeIva:'forfettario', createdAt:null,
+      };
+    }
+    return {
+      _id:null, number:null,
+      dataEmissione: todayISO(), dataValidita: addDays(todayISO(),30),
+      cliente:{ ragione:'', piva:'', indirizzo:'', citta:'', email:'', telefono:'' },
+      righe:[], note: DEFAULT_NOTE, regimeIva:'forfettario', createdAt:null,
+    };
+  }
+
+  state.quote = blankQuote(true);
+
+  function snapshot(){ return JSON.stringify(state.quote); }
+
+  /* ---------------- Rendering: issuer (editable) / footer (editable) ---------------- */
+  const HEADER_FIELD_MAP = {
+    hTitolare:'titolare', hForma:'formaGiuridica', hIndirizzo:'indirizzo',
+    hCap:'cap', hComune:'comune', hProvincia:'provincia',
+    hPiva:'piva', hRea:'rea', hPec:'pec', hEmail:'email',
+  };
+
+  function renderIssuerFields(){
+    Object.keys(HEADER_FIELD_MAP).forEach(id=>{
+      const el = $(id);
+      if(document.activeElement === el) return; // non toccare il campo che si sta scrivendo
+      el.value = state.company[HEADER_FIELD_MAP[id]] || '';
+    });
+  }
+
+  Object.keys(HEADER_FIELD_MAP).forEach(id=>{
+    $(id).addEventListener('input', (e)=>{
+      state.company[HEADER_FIELD_MAP[id]] = e.target.value;
+      scheduleCompanySave();
+    });
+  });
+
+  function composeFooterDefault(c){
+    const bits = [
+      `${c.ragioneSociale||''}${c.titolare? ' — '+c.titolare:''}${c.formaGiuridica? ' · '+c.formaGiuridica:''}`,
+      `P.IVA ${c.piva||''}${c.cf? ' · CF '+c.cf:''}${c.rea? ' · REA '+c.rea:''}`,
+      `${c.indirizzo||''}, ${c.cap||''} ${c.comune||''}${c.provincia? ' ('+c.provincia+')':''}`,
+      [c.pec && `PEC ${c.pec}`, c.email, c.telefono, c.sitoWeb].filter(Boolean).join(' · '),
+      c.iban ? `IBAN ${c.iban}` : '',
+    ].filter(Boolean);
+    return bits.join('\n');
+  }
+
+  function renderFooter(){
+    const el = $('footerLegal');
+    if(document.activeElement === el) return;
+    if(!state.company.footerText){ state.company.footerText = composeFooterDefault(state.company); }
+    el.value = state.company.footerText;
+    autoGrow(el);
+  }
+
+  $('footerLegal').addEventListener('input', (e)=>{
+    state.company.footerText = e.target.value;
+    autoGrow(e.target);
+    scheduleCompanySave();
+  });
+
+  $('btnResetFooter').addEventListener('click', ()=>{
+    state.company.footerText = composeFooterDefault(state.company);
+    renderFooter();
+    scheduleCompanySave();
+    toast('Piè di pagina rigenerato dai dati aziendali');
+  });
+
+  // Fallback locale (per-browser): tiene i dati aziendali anche quando il
+  // database dell'artifact non è raggiungibile (es. pagina self-hosted fuori da Claude).
+  const LS_COMPANY_KEY = 'mrv-preventivi-company-v1';
+  function loadCompanyFromLocalStorage(){
+    try{ const raw = localStorage.getItem(LS_COMPANY_KEY); return raw ? JSON.parse(raw) : null; }
+    catch(err){ return null; }
+  }
+  function saveCompanyToLocalStorage(){
+    try{ localStorage.setItem(LS_COMPANY_KEY, JSON.stringify(state.company)); }catch(err){ /* storage non disponibile */ }
+  }
+
+  let companySaveTimer = null;
+  function scheduleCompanySave(){
+    saveCompanyToLocalStorage();
+    clearTimeout(companySaveTimer);
+    companySaveTimer = setTimeout(async ()=>{
+      try{
+        if(backendType === 'claude'){
+          const db = await claude.use('db');
+          if(db) await db.doc('settings/company').set(state.company);
+        } else if(backendType === 'sheets'){
+          await sheetsApi.saveSettings(state.company);
+        }
+      }catch(err){ /* salvataggio silenzioso: nessun blocco UI se fallisce */ }
+    }, 700);
+  }
+
+  /* ---------------- Rendering: meta / cliente ---------------- */
+  function renderMeta(){
+    const q = state.quote;
+    const numEl = $('docNumber');
+    if(q.number){ numEl.textContent = q.number; numEl.classList.remove('draft'); }
+    else { numEl.textContent = 'BOZZA'; numEl.classList.add('draft'); }
+    $('dataEmissione').value = q.dataEmissione;
+    $('dataValidita').value = q.dataValidita;
+  }
+
+  function renderCliente(){
+    const c = state.quote.cliente;
+    $('cRagione').value = c.ragione; $('cPiva').value = c.piva;
+    $('cIndirizzo').value = c.indirizzo; $('cCitta').value = c.citta;
+    $('cEmail').value = c.email; $('cTelefono').value = c.telefono;
+  }
+
+  ['cRagione','cPiva','cIndirizzo','cCitta','cEmail','cTelefono'].forEach(id=>{
+    $(id).addEventListener('input', (e)=>{
+      const map = {cRagione:'ragione',cPiva:'piva',cIndirizzo:'indirizzo',cCitta:'citta',cEmail:'email',cTelefono:'telefono'};
+      state.quote.cliente[map[id]] = e.target.value;
+    });
+  });
+  $('dataEmissione').addEventListener('change', e => state.quote.dataEmissione = e.target.value);
+  $('dataValidita').addEventListener('change', e => state.quote.dataValidita = e.target.value);
+  $('note').addEventListener('input', e => { state.quote.note = e.target.value; });
+  $('regimeIva').addEventListener('change', e => { state.quote.regimeIva = e.target.value; renderTotals(); });
+
+  /* ---------------- Rendering: righe ---------------- */
+  function rigaRowHtml(r, idx){
+    return `
+      <tr data-rid="${r.rid}">
+        <td>
+          <input class="svc-name-input" data-field="servizio" value="${escapeHtml(r.servizio)}" placeholder="Nome servizio">
+          <div class="svc-cat">${escapeHtml(r.categoria||'Personalizzato')}</div>
+        </td>
+        <td><textarea class="desc-input" data-field="descrizione" rows="1" placeholder="Descrizione del servizio">${escapeHtml(r.descrizione)}</textarea></td>
+        <td>
+          <span class="select-wrap" data-tipo="${r.tipo}">
+            <select class="tipo-select" data-field="tipo">
+              <option value="una_tantum" ${r.tipo==='una_tantum'?'selected':''}>Una tantum</option>
+              <option value="mensile" ${r.tipo==='mensile'?'selected':''}>Mensile</option>
+              <option value="annuale" ${r.tipo==='annuale'?'selected':''}>Annuale</option>
+            </select>
+          </span>
+        </td>
+        <td><input class="num-input qty-input" data-field="qty" type="number" min="1" step="1" value="${r.qty}"></td>
+        <td>
+          <div class="price-input-wrap"><span class="cur">€</span><input class="num-input price-input" data-field="prezzo" type="number" min="0" step="1" value="${r.prezzo}"></div>
+        </td>
+        <td class="subtotal">${eur((Number(r.prezzo)||0)*(Number(r.qty)||0))}</td>
+        <td class="col-actions no-print"><button class="row-remove" data-remove="${r.rid}" title="Rimuovi riga">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+        </button></td>
+      </tr>`;
+  }
+
+  function renderRighe(){
+    const body = $('righeBody');
+    const righe = state.quote.righe;
+    $('emptyRows').style.display = righe.length ? 'none' : 'block';
+    body.innerHTML = righe.map(rigaRowHtml).join('');
+    body.querySelectorAll('textarea.desc-input').forEach(autoGrow);
+    renderTotals();
+  }
+
+  document.addEventListener('input', (e)=>{
+    const tr = e.target.closest('tr[data-rid]');
+    if(!tr) return;
+    const rid = tr.getAttribute('data-rid');
+    const riga = state.quote.righe.find(r=>r.rid===rid);
+    if(!riga) return;
+    const field = e.target.getAttribute('data-field');
+    if(!field) return;
+    if(field==='qty' || field==='prezzo'){
+      riga[field] = e.target.value === '' ? 0 : Number(e.target.value);
+      tr.querySelector('.subtotal').textContent = eur((Number(riga.prezzo)||0)*(Number(riga.qty)||0));
+      renderTotals();
+    } else {
+      riga[field] = e.target.value;
+      if(field==='tipo'){
+        const wrap = tr.querySelector('.select-wrap');
+        wrap.setAttribute('data-tipo', riga.tipo);
+        renderTotals();
+      }
+    }
+  });
+
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-remove]');
+    if(!btn) return;
+    const rid = btn.getAttribute('data-remove');
+    state.quote.righe = state.quote.righe.filter(r=>r.rid!==rid);
+    renderRighe();
+  });
+
+  function calcTotals(righe){
+    let tantum=0, mensile=0, annuale=0;
+    righe.forEach(r=>{
+      const sub = (Number(r.prezzo)||0) * (Number(r.qty)||0);
+      if(r.tipo==='mensile') mensile += sub;
+      else if(r.tipo==='annuale') annuale += sub;
+      else tantum += sub;
+    });
+    return {tantum, mensile, annuale};
+  }
+
+  function renderTotals(){
+    const t = calcTotals(state.quote.righe);
+    const regime = state.quote.regimeIva;
+    const rows = [];
+
+    function group(label, value, cadence){
+      if(!value) return;
+      if(regime === 'forfettario'){
+        rows.push(`<div class="totals-row"><span class="label">${label}</span><span class="val">${eur(value)}${cadence?`<span class="cadence">${cadence}</span>`:''}</span></div>`);
+      } else if(regime === 'esclusa'){
+        const iva = value*0.22, tot = value+iva;
+        rows.push(`<div class="totals-row"><span class="label">${label} (imponibile)</span><span class="val">${eur(value)}${cadence?`<span class="cadence">${cadence}</span>`:''}</span></div>`);
+        rows.push(`<div class="totals-row"><span class="label">&nbsp;&nbsp;+ IVA 22%</span><span class="val">${eur(iva)}</span></div>`);
+        rows.push(`<div class="totals-row"><span class="label"><b>&nbsp;&nbsp;Totale</b></span><span class="val">${eur(tot)}${cadence?`<span class="cadence">${cadence}</span>`:''}</span></div>`);
+      } else {
+        const imp = value/1.22, iva = value-imp;
+        rows.push(`<div class="totals-row"><span class="label">${label} (tot. IVA inclusa)</span><span class="val">${eur(value)}${cadence?`<span class="cadence">${cadence}</span>`:''}</span></div>`);
+        rows.push(`<div class="totals-row"><span class="label">&nbsp;&nbsp;di cui imponibile</span><span class="val">${eur(imp)}</span></div>`);
+        rows.push(`<div class="totals-row"><span class="label">&nbsp;&nbsp;di cui IVA 22%</span><span class="val">${eur(iva)}</span></div>`);
+      }
+    }
+    group('Una tantum', t.tantum, '');
+    group('Canone mensile', t.mensile, '/mese');
+    group('Canone annuale', t.annuale, '/anno');
+
+    if(!rows.length){
+      rows.push(`<div class="totals-row"><span class="label">Totale</span><span class="val">${eur(0)}</span></div>`);
+    }
+    $('totalsRows').innerHTML = rows.join(`<div class="totals-sep"></div>`);
+
+    $('ivaNote').textContent = regime==='forfettario'
+      ? "Operazione senza applicazione dell'IVA ai sensi dell'art. 1, commi 54–89, L. 190/2014 (regime forfettario)."
+      : "Aliquota IVA applicata: 22%.";
+  }
+
+  /* ---------------- Render everything ---------------- */
+  function renderAll(){
+    renderIssuerFields(); renderFooter(); renderMeta(); renderCliente(); renderRighe();
+    $('note').value = state.quote.note; autoGrow($('note'));
+    $('regimeIva').value = state.quote.regimeIva;
+    renderTotals();
+  }
+
+  /* ---------------- New / Save / Load ---------------- */
+  $('btnNew').addEventListener('click', ()=>{
+    if(state.quote.righe.length && snapshot() !== state.lastSavedSnapshot){
+      if(!confirm('Il preventivo attuale non è stato salvato. Iniziare comunque un nuovo preventivo?')) return;
+    }
+    state.quote = blankQuote(false);
+    state.lastSavedSnapshot = null;
+    $('demoBanner').style.display = 'none';
+    renderAll();
+    toast('Nuovo preventivo pronto');
+  });
+
+  $('btnDismissBanner').addEventListener('click', ()=>{ $('demoBanner').style.display='none'; });
+  $('btnCustomRow').addEventListener('click', ()=>{
+    state.quote.righe.push({rid:uid(), servizio:'', categoria:'Personalizzato', descrizione:'', tipo:'una_tantum', qty:1, prezzo:0});
+    renderRighe();
+    const rows = document.querySelectorAll('#righeBody tr');
+    const last = rows[rows.length-1];
+    if(last) last.querySelector('.svc-name-input').focus();
+  });
+
+  function formatQuoteNumber(seq, year){ return `n: ${String(seq).padStart(4,'0')}/${year}`; }
+
+  async function nextQuoteNumber(year){
+    const fallback = () => ({ id:'draft-'+Date.now(), number: formatQuoteNumber(Date.now()%10000, year) });
+    try{
+      if(backendType === 'claude'){
+        const db = await claude.use('db');
+        if(!db) return fallback();
+        const ref = db.doc('meta/counter');
+        const snap = await ref.get();
+        const cur = (snap.exists && snap.data().nextNumber) || 1;
+        await ref.set({nextNumber: cur + 1});
+        return { id: `q-${year}-${String(cur).padStart(4,'0')}`, number: formatQuoteNumber(cur, year) };
+      }
+      if(backendType === 'sheets'){
+        return await sheetsApi.nextNumber(year);
+      }
+      return fallback();
+    }catch(err){ return fallback(); }
+  }
+
+  $('btnSave').addEventListener('click', async ()=>{
+    const q = state.quote;
+    if(!q.cliente.ragione.trim()){ toast('Inserisci il nome del cliente prima di salvare'); $('cRagione').focus(); return; }
+    if(!q.righe.length){ toast('Aggiungi almeno una voce al preventivo'); return; }
+    if(backendType === 'none'){ toast('Salvataggio non disponibile — nessun backend configurato. Usa comunque "Genera PDF"'); return; }
+
+    $('btnSave').setAttribute('disabled','');
+    try{
+      if(!q.number){
+        const year = (q.dataEmissione||todayISO()).slice(0,4);
+        const res = await nextQuoteNumber(year);
+        q.number = res.number;
+        q._id = res.id;
+      }
+      const totals = calcTotals(q.righe);
+      const payload = {
+        id:q._id, number:q.number, dataEmissione:q.dataEmissione, dataValidita:q.dataValidita,
+        cliente:q.cliente, righe:q.righe, note:q.note, regimeIva:q.regimeIva,
+        totals, createdAt: q.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
+      };
+      if(backendType === 'claude'){
+        const db = await claude.use('db');
+        if(!db) throw new Error('db unavailable');
+        await db.collection('quotes').doc(q._id).set(payload);
+      } else if(backendType === 'sheets'){
+        await sheetsApi.saveQuote(payload);
+        await refreshSheetsQuotes();
+      } else {
+        throw new Error('nessun backend disponibile');
+      }
+      q.createdAt = payload.createdAt;
+      state.lastSavedSnapshot = snapshot();
+      $('demoBanner').style.display = 'none';
+      renderMeta();
+      toast(`Preventivo ${q.number} salvato`);
+      await downloadPdf(true); // ogni salvataggio scarica in automatico anche la copia PDF in locale
+    }catch(err){
+      console.error(err);
+      toast('Errore durante il salvataggio, riprova');
+    } finally {
+      $('btnSave').removeAttribute('disabled');
+    }
+  });
+
+  function loadQuote(data, id){
+    state.quote = {
+      _id:id, number:data.number, dataEmissione:data.dataEmissione, dataValidita:data.dataValidita,
+      cliente:{...data.cliente}, righe:(data.righe||[]).map(r=>({...r, rid: r.rid || uid()})),
+      note:data.note, regimeIva:data.regimeIva||'forfettario', createdAt:data.createdAt,
+    };
+    state.lastSavedSnapshot = snapshot();
+    $('demoBanner').style.display = 'none';
+    renderAll();
+    closeDrawer();
+    toast(`Preventivo ${data.number} caricato`);
+  }
+
+  function duplicateQuote(data){
+    state.quote = {
+      _id:null, number:null, dataEmissione: todayISO(), dataValidita: addDays(todayISO(),30),
+      cliente:{...data.cliente}, righe:(data.righe||[]).map(r=>({...r, rid:uid()})),
+      note:data.note, regimeIva:data.regimeIva||'forfettario', createdAt:null,
+    };
+    state.lastSavedSnapshot = null;
+    $('demoBanner').style.display = 'none';
+    renderAll();
+    closeDrawer();
+    toast('Preventivo duplicato come nuova bozza');
+  }
+
+  async function deleteQuote(id){
+    if(!confirm('Eliminare definitivamente questo preventivo?')) return;
+    try{
+      if(backendType === 'claude'){
+        const db = await claude.use('db');
+        if(!db) return;
+        await db.collection('quotes').doc(id).delete();
+      } else if(backendType === 'sheets'){
+        await sheetsApi.deleteQuote(id);
+        await refreshSheetsQuotes();
+      }
+      toast('Preventivo eliminato');
+    }catch(err){ toast('Errore durante l’eliminazione'); }
+  }
+
+  /* ---------------- PDF (file reale, non solo stampa) ---------------- */
+  function sanitizeFilename(s){
+    return String(s||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_+|_+$/g,'') || 'preventivo';
+  }
+  function quoteFilename(){
+    const num = state.quote.number ? state.quote.number.replace('n:','').replace('/','-').trim() : 'bozza';
+    const client = sanitizeFilename(state.quote.cliente.ragione || 'cliente');
+    return `Preventivo_${sanitizeFilename(num)}_${client}`;
+  }
+
+  async function buildQuotePdfBlob(){
+    const sheet = $('sheet');
+    document.querySelectorAll('textarea').forEach(autoGrow);
+    if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(err){} }
+    sheet.classList.add('pdf-capture');
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    let canvas;
+    try{
+      canvas = await html2canvas(sheet, {scale:2, backgroundColor:'#ffffff', useCORS:true});
+    } finally {
+      sheet.classList.remove('pdf-capture');
+    }
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit:'mm', format:'a4'});
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = pageWidth;
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    let heightLeft = imgHeight, position = 0;
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while(heightLeft > 0){
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+    return pdf.output('blob');
+  }
+
+  async function downloadPdf(silentOnError){
+    let blob;
+    try{ blob = await buildQuotePdfBlob(); }
+    catch(err){ console.error(err); if(!silentOnError) toast('Errore nella generazione del PDF, riprova'); return; }
+    try{
+      const dl = await claude.use('downloads');
+      if(dl){
+        await dl.save({filename: quoteFilename() + '.pdf', data: blob});
+        toast('PDF salvato in locale');
+      } else {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        toast('PDF generato — apri/salva dalla nuova scheda');
+      }
+    }catch(err){
+      if(err && err.code === 'declined') return; // l'utente ha annullato il salvataggio, nessun errore
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      toast('PDF generato — apri/salva dalla nuova scheda');
+    }
+  }
+
+  $('btnPdfTop').addEventListener('click', () => downloadPdf(false));
+  $('btnPdfBottom').addEventListener('click', () => downloadPdf(false));
+
+  /* ---------------- Catalog modal ---------------- */
+  const catSelection = new Set();
+
+  function renderCatalog(){
+    const groups = {};
+    state.catalog.forEach(s => { (groups[s.categoria] = groups[s.categoria]||[]).push(s); });
+    let html = '';
+    Object.keys(groups).forEach(cat=>{
+      html += `<div class="cat-group-title">${escapeHtml(cat)}</div>`;
+      groups[cat].forEach(s=>{
+        html += `
+          <div class="cat-item">
+            <input type="checkbox" data-cat-check="${s.id}" ${catSelection.has(s.id)?'checked':''}>
+            <div class="ci-body">
+              <div class="ci-name">${escapeHtml(s.nome)}</div>
+              <div class="ci-desc">${escapeHtml(s.descrizione)}</div>
+              <div class="ci-meta">
+                <span class="select-wrap" data-tipo="${s.tipo}" style="pointer-events:none">
+                  <select class="tipo-select" style="pointer-events:none" tabindex="-1"><option selected>${TIPO_LABEL[s.tipo]}</option></select>
+                </span>
+                <span class="ci-price">${eur(s.prezzo)}</span>
+              </div>
+            </div>
+            <button class="ci-del" data-cat-del="${s.id}" title="Rimuovi dal catalogo">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+            </button>
+          </div>`;
+      });
+    });
+    html += `
+      <div class="cat-add-form">
+        <div class="cat-group-title">Nuovo servizio nel catalogo</div>
+        <div class="form-grid">
+          <div class="form-field" style="grid-column:1/-1"><label>Nome servizio</label><input id="newSvcNome" placeholder="Es. Dashboard reportistica"></div>
+          <div class="form-field"><label>Categoria</label><input id="newSvcCat" placeholder="Es. Extra"></div>
+          <div class="form-field"><label>Tipo</label>
+            <select id="newSvcTipo"><option value="una_tantum">Una tantum</option><option value="mensile">Mensile</option><option value="annuale">Annuale</option></select>
+          </div>
+          <div class="form-field" style="grid-column:1/-1"><label>Descrizione</label><textarea id="newSvcDesc" rows="2"></textarea></div>
+          <div class="form-field"><label>Prezzo (€)</label><input id="newSvcPrezzo" type="number" min="0" step="1" value="0"></div>
+        </div>
+        <div style="margin-top:12px"><button class="btn btn-outline btn-sm" id="addCatalogItem">+ Aggiungi al catalogo</button></div>
+      </div>`;
+    $('catalogBody').innerHTML = html;
+    $('catSelCount').textContent = `${catSelection.size} selezionati`;
+  }
+
+  function openCatalog(){ catSelection.clear(); renderCatalog(); $('catalogOverlay').classList.add('open'); }
+  function closeCatalog(){ $('catalogOverlay').classList.remove('open'); }
+  $('btnCatalog').addEventListener('click', openCatalog);
+  $('closeCatalog').addEventListener('click', closeCatalog);
+  $('cancelCatalog').addEventListener('click', closeCatalog);
+  $('catalogOverlay').addEventListener('click', e=>{ if(e.target.id==='catalogOverlay') closeCatalog(); });
+
+  $('catalogBody').addEventListener('change', e=>{
+    const chk = e.target.closest('[data-cat-check]');
+    if(chk){
+      const id = chk.getAttribute('data-cat-check');
+      if(chk.checked) catSelection.add(id); else catSelection.delete(id);
+      $('catSelCount').textContent = `${catSelection.size} selezionati`;
+    }
+  });
+
+  $('catalogBody').addEventListener('click', async (e)=>{
+    const del = e.target.closest('[data-cat-del]');
+    if(del){
+      const id = del.getAttribute('data-cat-del');
+      state.catalog = state.catalog.filter(s=>s.id!==id);
+      catSelection.delete(id);
+      renderCatalog();
+      if(backendType === 'claude'){ try{ const db = await claude.use('db'); if(db) await db.collection('services').doc(id).delete(); }catch(err){} }
+      return;
+    }
+    if(e.target.id === 'addCatalogItem'){
+      const nome = $('newSvcNome').value.trim();
+      if(!nome){ toast('Inserisci il nome del servizio'); return; }
+      const item = {
+        id: 'svc-' + uid(),
+        categoria: $('newSvcCat').value.trim() || 'Extra',
+        nome, descrizione: $('newSvcDesc').value.trim(),
+        tipo: $('newSvcTipo').value, prezzo: Number($('newSvcPrezzo').value)||0,
+      };
+      state.catalog.push(item);
+      renderCatalog();
+      toast('Servizio aggiunto al catalogo');
+      if(backendType === 'claude'){ try{ const db = await claude.use('db'); if(db) await db.collection('services').doc(item.id).set(item); }catch(err){} }
+    }
+  });
+
+  $('addSelectedCatalog').addEventListener('click', ()=>{
+    if(!catSelection.size){ toast('Seleziona almeno un servizio'); return; }
+    catSelection.forEach(id=>{
+      const s = state.catalog.find(x=>x.id===id);
+      if(!s) return;
+      state.quote.righe.push({rid:uid(), servizio:s.nome, categoria:s.categoria, descrizione:s.descrizione, tipo:s.tipo, qty:1, prezzo:s.prezzo});
+    });
+    renderRighe();
+    closeCatalog();
+    toast(`${catSelection.size} servizi aggiunti al preventivo`);
+  });
+
+  /* ---------------- Saved quotes drawer ---------------- */
+  async function refreshSheetsQuotes(){
+    if(backendType !== 'sheets') return;
+    try{ state.savedQuotes = await sheetsApi.listQuotes(); }
+    catch(err){ console.warn('listQuotes error', err); }
+    renderDrawer();
+  }
+
+  function openDrawer(){
+    $('drawer').classList.add('open'); $('drawerOverlay').classList.add('open');
+    if(backendType === 'sheets') refreshSheetsQuotes(); // niente realtime: aggiorna alla riapertura
+  }
+  function closeDrawer(){ $('drawer').classList.remove('open'); $('drawerOverlay').classList.remove('open'); }
+  $('btnDrawer').addEventListener('click', openDrawer);
+  $('closeDrawer').addEventListener('click', closeDrawer);
+  $('drawerOverlay').addEventListener('click', closeDrawer);
+
+  function renderDrawer(){
+    const list = state.savedQuotes;
+    $('savedCount').style.display = list.length ? 'inline-block' : 'none';
+    $('savedCount').textContent = list.length;
+    if(backendType === 'none'){
+      $('drawerBody').innerHTML = `<div class="drawer-empty">Il salvataggio dei preventivi non è disponibile in questa visualizzazione. Puoi comunque generare il PDF.</div>`;
+      return;
+    }
+    const sourceLabel = backendType === 'sheets'
+      ? '<div class="drawer-source no-print">🔗 Sincronizzato con Google Sheets (condiviso con i soci)</div>'
+      : '<div class="drawer-source no-print">🔒 Anteprima Claude (database privato di questo artifact)</div>';
+    if(!list.length){
+      $('drawerBody').innerHTML = sourceLabel + `<div class="drawer-empty">Nessun preventivo salvato ancora. I preventivi che salvi compariranno qui.</div>`;
+      return;
+    }
+    $('drawerBody').innerHTML = sourceLabel + list.map(q=>{
+      const t = q.totals || {tantum:0,mensile:0,annuale:0};
+      const bits = [];
+      if(t.tantum) bits.push(eur(t.tantum) + ' una tantum');
+      if(t.mensile) bits.push(eur(t.mensile) + '/mese');
+      if(t.annuale) bits.push(eur(t.annuale) + '/anno');
+      return `
+        <div class="quote-card">
+          <div class="qnum">${escapeHtml(q.number)}</div>
+          <div class="qclient">${escapeHtml(q.cliente && q.cliente.ragione || 'Senza nome')}</div>
+          <div class="qmeta">Emesso il ${escapeHtml(q.dataEmissione||'')}</div>
+          <div class="qtotal">${bits.join(' · ') || eur(0)}</div>
+          <div class="qactions">
+            <button class="btn btn-outline btn-sm" data-open-q="${q._id}">Apri</button>
+            <button class="btn btn-outline btn-sm" data-dup-q="${q._id}">Duplica</button>
+            <button class="btn btn-text btn-sm" data-del-q="${q._id}">Elimina</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  $('drawerBody').addEventListener('click', e=>{
+    const openBtn = e.target.closest('[data-open-q]');
+    const dupBtn = e.target.closest('[data-dup-q]');
+    const delBtn = e.target.closest('[data-del-q]');
+    if(openBtn){ const q = state.savedQuotes.find(x=>x._id===openBtn.getAttribute('data-open-q')); if(q) loadQuote(q, q._id); }
+    if(dupBtn){ const q = state.savedQuotes.find(x=>x._id===dupBtn.getAttribute('data-dup-q')); if(q) duplicateQuote(q); }
+    if(delBtn){ deleteQuote(delBtn.getAttribute('data-del-q')); }
+  });
+
+  /* ---------------- Bootstrap backend: Claude db (in artifact) → Google Sheets (self-hosted) → nessuno ---------------- */
+  async function initBackend(){
+    // 1) Dentro un artifact Claude: usa il database interno, con sync in tempo reale.
+    if(typeof claude !== 'undefined' && claude && typeof claude.use === 'function'){
+      try{
+        const db = await claude.use('db');
+        if(db){
+          backendType = 'claude';
+          state.dbReady = true;
+
+          db.doc('settings/company').onSnapshot(snap=>{
+            if(snap.exists){ state.company = {...DEFAULT_COMPANY, ...snap.data()}; renderIssuerFields(); renderFooter(); }
+          }, err=>console.warn('settings sub error', err));
+
+          db.collection('services').onSnapshot(snap=>{
+            if(!snap.empty){ state.catalog = snap.docs.map(d=>({id:d.id, ...d.data()})); }
+          }, err=>console.warn('services sub error', err));
+
+          db.collection('quotes').orderBy('createdAt','desc').limit(50).onSnapshot(snap=>{
+            state.savedQuotes = snap.docs.map(d=>({_id:d.id, ...d.data()}));
+            renderDrawer();
+          }, err=>{ console.warn('quotes sub error', err); renderDrawer(); });
+
+          return;
+        }
+      }catch(err){ /* non stiamo girando dentro un artifact Claude, o il db non è concesso: proviamo Sheets */ }
+    }
+
+    // 2) Fuori da Claude (self-hosted): usa il backend Google Sheets, se configurato.
+    if(sheetsConfigured()){
+      backendType = 'sheets';
+      state.dbReady = true;
+      try{
+        const settings = await sheetsApi.getSettings();
+        if(settings && Object.keys(settings).length){
+          state.company = {...DEFAULT_COMPANY, ...settings};
+          renderIssuerFields(); renderFooter();
+        }
+      }catch(err){ console.warn('sheets getSettings error', err); }
+      await refreshSheetsQuotes();
+      return;
+    }
+
+    // 3) Nessun backend condiviso disponibile: si lavora solo in locale (localStorage per l'azienda).
+    backendType = 'none';
+    state.dbReady = false;
+    renderDrawer();
+  }
+
+  /* ---------------- Boot ---------------- */
+  const savedCompany = loadCompanyFromLocalStorage();
+  if(savedCompany) state.company = {...DEFAULT_COMPANY, ...savedCompany};
+  renderAll();
+  initBackend(); // se un backend risponde (Claude o Sheets), i suoi dati prevalgono su quelli locali
+})();
+</script>
+
+</body>
+</html>
