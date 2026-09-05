@@ -161,7 +161,7 @@
     flex:1;min-width:0;border:none;border-bottom:1px solid transparent;background:transparent;
     font-family:var(--font-mono);font-size:11px;color:var(--sheet-faint);padding:2px 1px;
     transition:border-color .15s ease;
-    overflow:hidden;text-overflow:ellipsis; /* mai testo tagliato senza indicazione */
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap; /* mai testo tagliato senza indicazione */
   }
   .issuer-input.emph{color:var(--sheet-muted);font-weight:600}
   .issuer-input::placeholder{color:var(--sheet-faint);opacity:.55;font-style:italic}
@@ -201,7 +201,7 @@
   .field input, .field textarea{
     width:100%;border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
     font-family:var(--font-body);font-size:14.5px;color:var(--sheet-text);padding:4px 2px;
-    overflow:hidden;text-overflow:ellipsis;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .field input::placeholder, .field textarea::placeholder{color:var(--sheet-faint);font-style:italic}
   .field input:focus, .field textarea:focus{border-bottom-color:var(--gold)}
@@ -218,7 +218,7 @@
   .col-actions{width:32px}
   .svc-name-input{
     width:100%;border:none;background:transparent;font-family:var(--font-display);font-weight:600;
-    font-size:14px;color:var(--sheet-text);padding:2px 0;overflow:hidden;text-overflow:ellipsis;
+    font-size:14px;color:var(--sheet-text);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
 
   /* Sotto i 760px la tabella diventa una pila di card: niente più scroll
