@@ -155,20 +155,34 @@
   .sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap}
   .sheet .brandmark-word{font-size:34px;color:var(--sheet-text)}
   .sheet .brandmark-sub{font-size:16px;color:var(--sheet-text);margin-top:2px}
+  /* Campo di testo del documento: cresce in altezza da solo, va a capo,
+     non taglia mai il testo (a differenza di <input>, che ha altezza rigida
+     e non manda mai a capo). */
+  .ce{
+    display:block;width:100%;min-width:0;
+    line-height:1.5;min-height:1.5em;
+    white-space:pre-wrap;          /* va a capo mantenendo la spaziatura */
+    overflow-wrap:anywhere;        /* spezza anche email/URL lunghissimi */
+    outline:none;cursor:text;
+  }
+  .ce:empty::before{
+    content:attr(data-placeholder);color:var(--sheet-faint);opacity:.7;font-style:italic;
+  }
+  .ce:focus{outline:none}
+
   .issuer-grid{margin-top:14px;display:flex;flex-direction:column;gap:6px;max-width:440px;min-width:0}
-  .issuer-line{display:flex;gap:8px;min-width:0}
+  .issuer-line{display:flex;gap:10px;min-width:0;align-items:flex-start}
   .issuer-input{
-    flex:1;min-width:0;border:none;border-bottom:1px solid transparent;background:transparent;
+    border-bottom:1px solid transparent;
     font-family:var(--font-mono);font-size:11px;color:var(--sheet-faint);padding:2px 1px;
     transition:border-color .15s ease;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap; /* mai testo tagliato senza indicazione */
   }
+  /* flex solo per i campi affiancati dentro una riga, non per quelli a tutta larghezza */
+  .issuer-line > .issuer-input{flex:1 1 0;min-width:0}
+  .issuer-line > .issuer-input.small{flex:0 0 58px}
   .issuer-input.emph{color:var(--sheet-muted);font-weight:600}
-  .issuer-input::placeholder{color:var(--sheet-faint);opacity:.55;font-style:italic}
   .issuer-input:hover, .issuer-input:focus{border-bottom-color:var(--sheet-line)}
-  .issuer-input.small{max-width:52px;flex:0 0 52px}
   .issuer-line.full{width:100%}
-  .issuer-line.full .issuer-input{flex:1 1 100%}
 
   .doc-meta{text-align:right}
   .doc-eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
@@ -179,7 +193,8 @@
   .meta-row label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sheet-faint)}
   .meta-row input[type="date"]{
     border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
-    font-family:var(--font-mono);font-size:12.5px;color:var(--sheet-text);padding:2px 2px;text-align:right;
+    font-family:var(--font-mono);font-size:12.5px;color:var(--sheet-text);padding:3px 2px;text-align:right;
+    line-height:1.6;height:auto;
   }
 
   .divider{height:1px;background:var(--sheet-line);margin:34px 0}
@@ -198,17 +213,15 @@
   .cliente-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 28px}
   @media (max-width:560px){ .cliente-grid{grid-template-columns:1fr} }
   .field label{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sheet-faint);margin-bottom:5px}
-  .field input, .field textarea{
-    width:100%;border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
+  .field .ce{
+    border-bottom:1px solid var(--sheet-line);
     font-family:var(--font-body);font-size:14.5px;color:var(--sheet-text);padding:4px 2px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .field input::placeholder, .field textarea::placeholder{color:var(--sheet-faint);font-style:italic}
-  .field input:focus, .field textarea:focus{border-bottom-color:var(--gold)}
+  .field .ce:focus{border-bottom-color:var(--gold)}
 
   /* table */
   .table-wrap{overflow-x:auto;margin:0 -4px}
-  table.voci{border-collapse:collapse;width:100%;min-width:740px}
+  table.voci{border-collapse:collapse;width:100%;min-width:600px}
   table.voci thead th{
     text-align:left;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;
     text-transform:uppercase;color:var(--bronze);padding:0 10px 10px;border-bottom:1px solid var(--sheet-line);
@@ -216,10 +229,9 @@
   table.voci td{padding:14px 10px;border-bottom:1px solid var(--sheet-line);vertical-align:top}
   table.voci tr:last-child td{border-bottom:1px solid var(--sheet-line)}
   .col-actions{width:32px}
-  .svc-name-input{
-    width:100%;border:none;background:transparent;resize:none;overflow:hidden;
+  .svc-name{
     font-family:var(--font-display);font-weight:600;
-    font-size:14px;color:var(--sheet-text);padding:2px 0;line-height:1.35;
+    font-size:14px;color:var(--sheet-text);padding:2px 0;
   }
 
   /* Sotto i 760px la tabella diventa una pila di card: niente più scroll
@@ -244,9 +256,8 @@
     .qty-input, .price-input{width:100%;max-width:140px}
   }
   .svc-cat{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;color:var(--sheet-faint);margin-top:3px;text-transform:uppercase}
-  .desc-input{
-    width:100%;min-width:220px;border:none;background:transparent;resize:none;overflow:hidden;
-    font-family:var(--font-body);font-size:13px;color:var(--sheet-muted);line-height:1.5;padding:2px 0;
+  .desc{
+    font-family:var(--font-body);font-size:13px;color:var(--sheet-muted);padding:2px 0;
   }
   .select-wrap{position:relative;display:inline-block}
   .select-wrap::after{
@@ -256,8 +267,8 @@
   }
   select.tipo-select{
     font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
-    padding:5px 22px 5px 20px;border-radius:999px;border:1px solid;appearance:none;-webkit-appearance:none;
-    background:transparent;position:relative;
+    padding:6px 22px 6px 20px;border-radius:999px;border:1px solid;appearance:none;-webkit-appearance:none;
+    background:transparent;position:relative;line-height:1.5;height:auto;
   }
   .select-wrap::before{
     content:'';position:absolute;left:9px;top:50%;width:6px;height:6px;border-radius:50%;transform:translateY(-50%);
@@ -275,7 +286,7 @@
   .num-input{
     border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
     font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--sheet-text);
-    padding:4px 2px;text-align:right;
+    padding:4px 2px;text-align:right;line-height:1.6;height:auto;
   }
   .qty-input{width:44px}
   .price-input{width:84px}
@@ -309,19 +320,18 @@
   }
   .iva-note{font-size:10.5px;color:var(--sheet-faint);margin-top:10px;line-height:1.5}
 
-  .notes-area{
-    width:100%;border:none;background:transparent;resize:none;overflow:hidden;
+  .notes{
     font-family:var(--font-body);font-size:13.5px;color:var(--sheet-muted);line-height:1.7;
     border-top:1px solid var(--sheet-line);padding-top:14px;
   }
 
   .sheet-footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--sheet-line);text-align:center}
-  .footer-legal-input{
-    width:100%;border:none;background:transparent;resize:none;overflow:hidden;text-align:center;
+  .footer-legal{
+    text-align:center;
     font-family:var(--font-mono);font-size:10px;color:var(--sheet-faint);letter-spacing:.02em;line-height:1.9;
     padding:3px 4px;border-radius:8px;transition:background .15s ease;
   }
-  .footer-legal-input:hover, .footer-legal-input:focus{background:var(--sheet-soft)}
+  .footer-legal:hover, .footer-legal:focus{background:var(--sheet-soft)}
   .footer-hint{margin-top:8px;text-align:center;font-size:10.5px;color:var(--sheet-faint)}
   .footer-hint button{background:none;border:none;color:var(--bronze);text-decoration:underline;font-size:10.5px;padding:0}
 
@@ -434,7 +444,7 @@
     .toolbar, .fab-bar, .overlay, .drawer, .drawer-overlay, .toast, .banner, .no-print{display:none!important}
     .page-wrap{padding:0;max-width:none}
     .sheet{box-shadow:none;border-radius:0;padding:0}
-    .field input, .field textarea, .num-input, .desc-input, .svc-name-input, .notes-area, .meta-row input, .iva-select, select.tipo-select{
+    .ce, .num-input, .meta-row input, .iva-select, select.tipo-select{
       border:none!important;background:transparent!important;color:inherit!important;
     }
     .select-wrap::after{display:none}
@@ -444,7 +454,7 @@
 
   /* ---------- PDF capture mode (mirrors print, scoped to #sheet) ---------- */
   #sheet.pdf-capture .no-print{display:none!important}
-  #sheet.pdf-capture input, #sheet.pdf-capture textarea, #sheet.pdf-capture select{
+  #sheet.pdf-capture input, #sheet.pdf-capture textarea, #sheet.pdf-capture select, #sheet.pdf-capture .ce{
     border-color:transparent!important;background:transparent!important;
   }
   #sheet.pdf-capture .select-wrap::after{display:none}
@@ -489,24 +499,24 @@
         </div>
         <div class="issuer-grid" id="issuerGrid">
           <div class="issuer-line">
-            <input class="issuer-input emph" id="hTitolare" placeholder="Titolare">
-            <input class="issuer-input" id="hForma" placeholder="Forma giuridica">
+            <div class="ce issuer-input emph" contenteditable="true" id="hTitolare" data-placeholder="Titolare"></div>
+            <div class="ce issuer-input" contenteditable="true" id="hForma" data-placeholder="Forma giuridica"></div>
           </div>
-          <input class="issuer-input" id="hIndirizzo" placeholder="Indirizzo">
+          <div class="ce issuer-input" contenteditable="true" id="hIndirizzo" data-placeholder="Indirizzo"></div>
           <div class="issuer-line">
-            <input class="issuer-input small" id="hCap" placeholder="CAP">
-            <input class="issuer-input" id="hComune" placeholder="Comune">
-            <input class="issuer-input small" id="hProvincia" placeholder="Prov.">
+            <div class="ce issuer-input small" contenteditable="true" id="hCap" data-placeholder="CAP"></div>
+            <div class="ce issuer-input" contenteditable="true" id="hComune" data-placeholder="Comune"></div>
+            <div class="ce issuer-input small" contenteditable="true" id="hProvincia" data-placeholder="Prov."></div>
           </div>
           <div class="issuer-line">
-            <input class="issuer-input" id="hPiva" placeholder="P.IVA">
-            <input class="issuer-input" id="hRea" placeholder="REA">
+            <div class="ce issuer-input" contenteditable="true" id="hPiva" data-placeholder="P.IVA"></div>
+            <div class="ce issuer-input" contenteditable="true" id="hRea" data-placeholder="REA"></div>
           </div>
           <div class="issuer-line full">
-            <input class="issuer-input" id="hPec" placeholder="PEC" type="email">
+            <div class="ce issuer-input" contenteditable="true" id="hPec" data-placeholder="PEC"></div>
           </div>
           <div class="issuer-line full">
-            <input class="issuer-input" id="hEmail" placeholder="Email" type="email">
+            <div class="ce issuer-input" contenteditable="true" id="hEmail" data-placeholder="Email"></div>
           </div>
         </div>
       </div>
@@ -530,12 +540,12 @@
 
     <div class="eyebrow"><span>Cliente</span><span class="line"></span></div>
     <div class="cliente-grid">
-      <div class="field"><label for="cRagione">Ragione sociale / Nome</label><input id="cRagione" placeholder="Es. Rossi S.r.l."></div>
-      <div class="field"><label for="cPiva">P.IVA / Codice fiscale</label><input id="cPiva" placeholder="00000000000"></div>
-      <div class="field"><label for="cIndirizzo">Indirizzo</label><input id="cIndirizzo" placeholder="Via, numero civico"></div>
-      <div class="field"><label for="cCitta">CAP, Città (Prov.)</label><input id="cCitta" placeholder="10121 Torino (TO)"></div>
-      <div class="field"><label for="cEmail">Email referente</label><input id="cEmail" placeholder="nome@azienda.it" type="email"></div>
-      <div class="field"><label for="cTelefono">Telefono</label><input id="cTelefono" placeholder="+39 ..." type="tel"></div>
+      <div class="field"><label>Ragione sociale / Nome</label><div class="ce" contenteditable="true" id="cRagione" data-placeholder="Es. Rossi S.r.l."></div></div>
+      <div class="field"><label>P.IVA / Codice fiscale</label><div class="ce" contenteditable="true" id="cPiva" data-placeholder="00000000000"></div></div>
+      <div class="field"><label>Indirizzo</label><div class="ce" contenteditable="true" id="cIndirizzo" data-placeholder="Via, numero civico"></div></div>
+      <div class="field"><label>CAP, Città (Prov.)</label><div class="ce" contenteditable="true" id="cCitta" data-placeholder="10121 Torino (TO)"></div></div>
+      <div class="field"><label>Email referente</label><div class="ce" contenteditable="true" id="cEmail" data-placeholder="nome@azienda.it"></div></div>
+      <div class="field"><label>Telefono</label><div class="ce" contenteditable="true" id="cTelefono" data-placeholder="+39 ..."></div></div>
     </div>
 
     <div class="divider"></div>
@@ -582,10 +592,10 @@
     <div class="divider"></div>
 
     <div class="eyebrow"><span>Note e condizioni</span><span class="line"></span></div>
-    <textarea class="notes-area" id="note" rows="3"></textarea>
+    <div class="ce notes" contenteditable="true" id="note" data-placeholder="Note e condizioni del preventivo"></div>
 
     <div class="sheet-footer">
-      <textarea class="footer-legal-input" id="footerLegal" rows="1"></textarea>
+      <div class="ce footer-legal" contenteditable="true" id="footerLegal" data-placeholder="Dati aziendali a piè di pagina"></div>
       <div class="footer-hint no-print">Testo modificabile liberamente · <button type="button" id="btnResetFooter">rigenera dai dati aziendali</button></div>
     </div>
   </div>
@@ -631,7 +641,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-09-05-19:40-wrap-fix';
+  const BUILD_ID = 'build-2026-09-05-20:15-campi-a-capo';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -650,6 +660,28 @@
 
   function autoGrow(el){ if(!el) return; el.style.height='auto'; el.style.height = (el.scrollHeight)+'px'; }
   document.addEventListener('input', (e) => { if(e.target.tagName==='TEXTAREA') autoGrow(e.target); });
+
+  // Legge il testo di un campo, sia esso un input nativo o un campo
+  // contenteditable (che va a capo e cresce da solo, senza tagliare nulla).
+  function fieldText(el){
+    if(!el) return '';
+    if(el.isContentEditable){
+      const t = el.textContent;
+      if(!t.trim() && el.innerHTML !== '') el.innerHTML = ''; // riattiva il placeholder
+      return t;
+    }
+    return el.value;
+  }
+
+  // Incolla sempre come testo semplice: evita che HTML esterno entri nel documento.
+  document.addEventListener('paste', (e)=>{
+    const el = e.target;
+    if(el && el.isContentEditable){
+      e.preventDefault();
+      const text = ((e.clipboardData || window.clipboardData) || {getData:()=>''}).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    }
+  });
 
   /* ---------------- Defaults (used when db is unavailable) ---------------- */
   const DEFAULT_COMPANY = {
@@ -780,13 +812,13 @@
     Object.keys(HEADER_FIELD_MAP).forEach(id=>{
       const el = $(id);
       if(document.activeElement === el) return; // non toccare il campo che si sta scrivendo
-      el.value = state.company[HEADER_FIELD_MAP[id]] || '';
+      el.textContent = state.company[HEADER_FIELD_MAP[id]] || '';
     });
   }
 
   Object.keys(HEADER_FIELD_MAP).forEach(id=>{
     $(id).addEventListener('input', (e)=>{
-      state.company[HEADER_FIELD_MAP[id]] = e.target.value;
+      state.company[HEADER_FIELD_MAP[id]] = fieldText(e.target);
       scheduleCompanySave();
     });
   });
@@ -806,13 +838,11 @@
     const el = $('footerLegal');
     if(document.activeElement === el) return;
     if(!state.company.footerText){ state.company.footerText = composeFooterDefault(state.company); }
-    el.value = state.company.footerText;
-    autoGrow(el);
+    el.textContent = state.company.footerText;
   }
 
   $('footerLegal').addEventListener('input', (e)=>{
-    state.company.footerText = e.target.value;
-    autoGrow(e.target);
+    state.company.footerText = fieldText(e.target);
     scheduleCompanySave();
   });
 
@@ -862,20 +892,20 @@
 
   function renderCliente(){
     const c = state.quote.cliente;
-    $('cRagione').value = c.ragione; $('cPiva').value = c.piva;
-    $('cIndirizzo').value = c.indirizzo; $('cCitta').value = c.citta;
-    $('cEmail').value = c.email; $('cTelefono').value = c.telefono;
+    $('cRagione').textContent = c.ragione; $('cPiva').textContent = c.piva;
+    $('cIndirizzo').textContent = c.indirizzo; $('cCitta').textContent = c.citta;
+    $('cEmail').textContent = c.email; $('cTelefono').textContent = c.telefono;
   }
 
   ['cRagione','cPiva','cIndirizzo','cCitta','cEmail','cTelefono'].forEach(id=>{
     $(id).addEventListener('input', (e)=>{
       const map = {cRagione:'ragione',cPiva:'piva',cIndirizzo:'indirizzo',cCitta:'citta',cEmail:'email',cTelefono:'telefono'};
-      state.quote.cliente[map[id]] = e.target.value;
+      state.quote.cliente[map[id]] = fieldText(e.target);
     });
   });
   $('dataEmissione').addEventListener('change', e => state.quote.dataEmissione = e.target.value);
   $('dataValidita').addEventListener('change', e => state.quote.dataValidita = e.target.value);
-  $('note').addEventListener('input', e => { state.quote.note = e.target.value; });
+  $('note').addEventListener('input', e => { state.quote.note = fieldText(e.target); });
   $('regimeIva').addEventListener('change', e => { state.quote.regimeIva = e.target.value; renderTotals(); });
 
   /* ---------------- Rendering: righe ---------------- */
@@ -883,10 +913,10 @@
     return `
       <tr data-rid="${r.rid}">
         <td data-label="Servizio">
-          <textarea class="svc-name-input" data-field="servizio" rows="1" placeholder="Nome servizio">${escapeHtml(r.servizio)}</textarea>
+          <div class="ce svc-name" contenteditable="true" data-field="servizio" data-placeholder="Nome servizio">${escapeHtml(r.servizio)}</div>
           <div class="svc-cat">${escapeHtml(r.categoria||'Personalizzato')}</div>
         </td>
-        <td data-label="Descrizione"><textarea class="desc-input" data-field="descrizione" rows="1" placeholder="Descrizione del servizio">${escapeHtml(r.descrizione)}</textarea></td>
+        <td data-label="Descrizione"><div class="ce desc" contenteditable="true" data-field="descrizione" data-placeholder="Descrizione del servizio">${escapeHtml(r.descrizione)}</div></td>
         <td data-label="Tipo">
           <span class="select-wrap" data-tipo="${r.tipo}">
             <select class="tipo-select" data-field="tipo">
@@ -912,7 +942,6 @@
     const righe = state.quote.righe;
     $('emptyRows').style.display = righe.length ? 'none' : 'block';
     body.innerHTML = righe.map(rigaRowHtml).join('');
-    body.querySelectorAll('textarea.desc-input, textarea.svc-name-input').forEach(autoGrow);
     renderTotals();
   }
 
@@ -929,7 +958,7 @@
       tr.querySelector('.subtotal').textContent = eur((Number(riga.prezzo)||0)*(Number(riga.qty)||0));
       renderTotals();
     } else {
-      riga[field] = e.target.value;
+      riga[field] = fieldText(e.target);
       if(field==='tipo'){
         const wrap = tr.querySelector('.select-wrap');
         wrap.setAttribute('data-tipo', riga.tipo);
@@ -995,7 +1024,7 @@
   /* ---------------- Render everything ---------------- */
   function renderAll(){
     renderIssuerFields(); renderFooter(); renderMeta(); renderCliente(); renderRighe();
-    $('note').value = state.quote.note; autoGrow($('note'));
+    $('note').textContent = state.quote.note;
     $('regimeIva').value = state.quote.regimeIva;
     renderTotals();
   }
@@ -1018,7 +1047,7 @@
     renderRighe();
     const rows = document.querySelectorAll('#righeBody tr');
     const last = rows[rows.length-1];
-    if(last) last.querySelector('.svc-name-input').focus();
+    if(last) last.querySelector('.svc-name').focus();
   });
 
   function formatQuoteNumber(seq, year){ return `n: ${String(seq).padStart(4,'0')}/${year}`; }
