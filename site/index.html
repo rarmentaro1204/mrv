@@ -259,29 +259,37 @@
   .desc{
     font-family:var(--font-body);font-size:13px;color:var(--sheet-muted);padding:2px 0;
   }
-  .select-wrap{position:relative;display:inline-block}
+  /* La pill del tipo canone: il testo è un normale <span> (quindi non viene mai
+     tagliato come succede al testo interno di un <select>), mentre il <select>
+     resta sopra, invisibile, per conservare il menu a tendina nativo. */
+  .select-wrap{
+    position:relative;display:inline-flex;align-items:center;max-width:100%;
+    padding:5px 18px 5px 17px;border-radius:999px;border:1px solid transparent;
+  }
+  .select-wrap::before{
+    content:'';position:absolute;left:7px;top:50%;width:5px;height:5px;border-radius:50%;transform:translateY(-50%);
+  }
   .select-wrap::after{
-    content:'';position:absolute;right:9px;top:50%;width:5px;height:5px;
+    content:'';position:absolute;right:7px;top:50%;width:4px;height:4px;
     border-right:1.4px solid currentColor;border-bottom:1.4px solid currentColor;
     transform:translateY(-70%) rotate(45deg);pointer-events:none;opacity:.55;
   }
+  .select-wrap.static::after{display:none}
+  .tipo-label{
+    font-family:var(--font-mono);font-size:9.5px;font-weight:700;letter-spacing:.04em;
+    text-transform:uppercase;line-height:1.5;
+  }
   select.tipo-select{
-    font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
-    padding:6px 22px 6px 20px;border-radius:999px;border:1px solid;appearance:none;-webkit-appearance:none;
-    background:transparent;position:relative;line-height:1.5;height:auto;
+    position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;
+    opacity:0;cursor:pointer;border:none;background:transparent;
+    appearance:none;-webkit-appearance:none;
   }
-  .select-wrap::before{
-    content:'';position:absolute;left:9px;top:50%;width:6px;height:6px;border-radius:50%;transform:translateY(-50%);
-  }
-  .select-wrap[data-tipo="una_tantum"]{color:var(--bronze)}
+  .select-wrap[data-tipo="una_tantum"]{color:var(--bronze);background-color:rgba(203,170,102,.14);border-color:rgba(203,170,102,.4)}
   .select-wrap[data-tipo="una_tantum"]::before{background:var(--gold)}
-  .select-wrap[data-tipo="una_tantum"] select{background-color:rgba(203,170,102,.14);border-color:rgba(203,170,102,.4)}
-  .select-wrap[data-tipo="mensile"]{color:var(--bronze)}
+  .select-wrap[data-tipo="mensile"]{color:var(--bronze);background-color:rgba(139,115,57,.09);border-color:rgba(139,115,57,.32)}
   .select-wrap[data-tipo="mensile"]::before{background:var(--bronze)}
-  .select-wrap[data-tipo="mensile"] select{background-color:rgba(139,115,57,.09);border-color:rgba(139,115,57,.32)}
-  .select-wrap[data-tipo="annuale"]{color:var(--slate-deep)}
+  .select-wrap[data-tipo="annuale"]{color:var(--slate-deep);background-color:rgba(71,85,105,.08);border-color:rgba(71,85,105,.3)}
   .select-wrap[data-tipo="annuale"]::before{background:var(--slate-deep)}
-  .select-wrap[data-tipo="annuale"] select{background-color:rgba(71,85,105,.08);border-color:rgba(71,85,105,.3)}
 
   .num-input{
     border:none;border-bottom:1px solid var(--sheet-line);background:transparent;
@@ -450,6 +458,10 @@
     .select-wrap::after{display:none}
     table.voci{min-width:0}
     .table-wrap{overflow:visible}
+    /* Un blocco non viene mai spezzato a metà tra due pagine */
+    table.voci tr, .totals-box, .totals-wrap, .sheet-footer, .field, .notes, .sheet-head{
+      break-inside:avoid; page-break-inside:avoid;
+    }
   }
 
   /* ---------- PDF capture mode (mirrors print, scoped to #sheet) ---------- */
@@ -561,7 +573,7 @@
     <div class="table-wrap">
       <table class="voci">
         <colgroup>
-          <col style="width:23%"><col style="width:34%"><col style="width:11%">
+          <col style="width:21%"><col style="width:29%"><col style="width:18%">
           <col style="width:6%"><col style="width:10%"><col style="width:11%"><col style="width:5%">
         </colgroup>
         <thead>
@@ -641,7 +653,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-09-05-20:15-campi-a-capo';
+  const BUILD_ID = 'build-2026-09-06-salto-pagina';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -919,7 +931,8 @@
         <td data-label="Descrizione"><div class="ce desc" contenteditable="true" data-field="descrizione" data-placeholder="Descrizione del servizio">${escapeHtml(r.descrizione)}</div></td>
         <td data-label="Tipo">
           <span class="select-wrap" data-tipo="${r.tipo}">
-            <select class="tipo-select" data-field="tipo">
+            <span class="tipo-label">${TIPO_LABEL[r.tipo] || TIPO_LABEL.una_tantum}</span>
+            <select class="tipo-select" data-field="tipo" aria-label="Tipo di canone">
               <option value="una_tantum" ${r.tipo==='una_tantum'?'selected':''}>Una tantum</option>
               <option value="mensile" ${r.tipo==='mensile'?'selected':''}>Mensile</option>
               <option value="annuale" ${r.tipo==='annuale'?'selected':''}>Annuale</option>
@@ -962,6 +975,8 @@
       if(field==='tipo'){
         const wrap = tr.querySelector('.select-wrap');
         wrap.setAttribute('data-tipo', riga.tipo);
+        const lbl = wrap.querySelector('.tipo-label');
+        if(lbl) lbl.textContent = TIPO_LABEL[riga.tipo] || TIPO_LABEL.una_tantum;
         renderTotals();
       }
     }
@@ -1167,33 +1182,61 @@
     return `Preventivo_${sanitizeFilename(num)}_${client}`;
   }
 
+  const SCALE_PDF = 2;
+
+  // Punti in cui è lecito spezzare la pagina: la fine di una riga di servizio,
+  // di una sezione, del riquadro totali... Serve a non tagliare mai un blocco a metà.
+  function collectBreakPoints(sheet){
+    const top = sheet.getBoundingClientRect().top;
+    const points = [];
+    sheet.querySelectorAll('#righeBody tr, .divider, .table-wrap, .totals-wrap, .notes, .sheet-footer, .cliente-grid, .sheet-head')
+      .forEach(el=>{
+        const b = el.getBoundingClientRect().bottom - top;
+        if(b > 0) points.push(b * SCALE_PDF);
+      });
+    return points.sort((a,b)=>a-b);
+  }
+
   async function buildQuotePdfBlob(){
     const sheet = $('sheet');
-    document.querySelectorAll('textarea').forEach(autoGrow);
     if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(err){} }
     sheet.classList.add('pdf-capture');
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-    let canvas;
+    let canvas, breakPoints;
     try{
-      canvas = await html2canvas(sheet, {scale:2, backgroundColor:'#ffffff', useCORS:true});
+      breakPoints = collectBreakPoints(sheet);
+      canvas = await html2canvas(sheet, {scale:SCALE_PDF, backgroundColor:'#ffffff', useCORS:true});
     } finally {
       sheet.classList.remove('pdf-capture');
     }
+
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({unit:'mm', format:'a4'});
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = pageWidth;
-    const imgHeight = canvas.height * imgWidth / canvas.width;
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    let heightLeft = imgHeight, position = 0;
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    while(heightLeft > 0){
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const pxPerMm = canvas.width / pageW;      // px del canvas per ogni mm stampato
+    const pageHpx = pageH * pxPerMm;           // altezza di una pagina A4 in px del canvas
+
+    let y = 0, firstPage = true;
+    while(y < canvas.height - 1){
+      let cut = Math.min(y + pageHpx, canvas.height);
+      if(cut < canvas.height){
+        // scendi all'ultimo punto di taglio "sicuro" che entra ancora nella pagina
+        const safe = breakPoints.filter(b => b > y + pageHpx * 0.25 && b <= cut);
+        if(safe.length) cut = safe[safe.length - 1];
+      }
+      const sliceH = Math.max(1, Math.round(cut - y));
+      const slice = document.createElement('canvas');
+      slice.width = canvas.width;
+      slice.height = sliceH;
+      const ctx = slice.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, slice.width, slice.height);
+      ctx.drawImage(canvas, 0, y, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      if(!firstPage) pdf.addPage();
+      pdf.addImage(slice.toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pageW, sliceH / pxPerMm);
+      firstPage = false;
+      y = cut;
     }
     return pdf.output('blob');
   }
@@ -1240,9 +1283,7 @@
               <div class="ci-name">${escapeHtml(s.nome)}</div>
               <div class="ci-desc">${escapeHtml(s.descrizione)}</div>
               <div class="ci-meta">
-                <span class="select-wrap" data-tipo="${s.tipo}" style="pointer-events:none">
-                  <select class="tipo-select" style="pointer-events:none" tabindex="-1"><option selected>${TIPO_LABEL[s.tipo]}</option></select>
-                </span>
+                <span class="select-wrap static" data-tipo="${s.tipo}"><span class="tipo-label">${TIPO_LABEL[s.tipo]}</span></span>
                 <span class="ci-price">${eur(s.prezzo)}</span>
               </div>
             </div>
