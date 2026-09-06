@@ -187,7 +187,6 @@
   .doc-meta{text-align:right}
   .doc-eyebrow{font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
   .doc-number{font-family:var(--font-display);font-weight:800;font-size:24px;letter-spacing:-.02em;margin-top:4px}
-  .doc-number.draft{color:var(--sheet-faint);font-style:italic;font-weight:600;font-size:18px}
   .meta-rows{margin-top:14px;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
   .meta-row{display:flex;align-items:center;gap:8px;justify-content:flex-end}
   .meta-row label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--sheet-faint)}
@@ -470,6 +469,11 @@
     border-color:transparent!important;background:transparent!important;
   }
   #sheet.pdf-capture .select-wrap::after{display:none}
+  /* Nel PDF e in stampa i campi lasciati vuoti spariscono del tutto:
+     niente testo segnaposto e niente righe vuote nell'intestazione. */
+  #sheet.pdf-capture .ce:empty::before{content:none}
+  .doc-hide-empty{display:none!important}
+  @media print{ .ce:empty::before{content:none} }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -534,7 +538,7 @@
       </div>
       <div class="doc-meta">
         <div class="doc-eyebrow">Preventivo</div>
-        <div class="doc-number" id="docNumber">BOZZA</div>
+        <div class="doc-number" id="docNumber"></div>
         <div class="meta-rows">
           <div class="meta-row">
             <label for="dataEmissione">Data</label>
@@ -653,7 +657,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-09-06-salto-pagina';
+  const BUILD_ID = 'build-2026-09-06-numerazione-105';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -732,6 +736,9 @@
   const DEFAULT_NOTE = "Il preventivo ha validità 30 giorni dalla data di emissione. Modalità di pagamento: 50% all'avvio del progetto, 50% alla consegna. I canoni ricorrenti vengono fatturati anticipatamente con cadenza mensile/annuale a partire dal mese di attivazione del servizio.";
 
   const TIPO_LABEL = {una_tantum:'Una tantum', mensile:'Mensile', annuale:'Annuale'};
+
+  // Primo numero della serie: la numerazione parte da qui.
+  const START_NUMBER = 105;
 
   /* ---------------- Backend Google Sheets (per l'uso fuori da Claude) ----------------
      Dentro l'anteprima Claude il tool usa il proprio database (claude.use('db')).
@@ -895,9 +902,8 @@
   /* ---------------- Rendering: meta / cliente ---------------- */
   function renderMeta(){
     const q = state.quote;
-    const numEl = $('docNumber');
-    if(q.number){ numEl.textContent = q.number; numEl.classList.remove('draft'); }
-    else { numEl.textContent = 'BOZZA'; numEl.classList.add('draft'); }
+    const year = (q.dataEmissione || todayISO()).slice(0,4);
+    $('docNumber').textContent = q.number || previewQuoteNumber(year);
     $('dataEmissione').value = q.dataEmissione;
     $('dataValidita').value = q.dataValidita;
   }
@@ -1067,6 +1073,17 @@
 
   function formatQuoteNumber(seq, year){ return `n: ${String(seq).padStart(4,'0')}/${year}`; }
 
+  // Numero mostrato prima del salvataggio: il prossimo della serie, dedotto dai
+  // preventivi già salvati (il numero definitivo lo assegna il backend al salvataggio).
+  function previewQuoteNumber(year){
+    let max = START_NUMBER - 1;
+    state.savedQuotes.forEach(q=>{
+      const m = /(\d+)\s*\/\s*(\d{4})/.exec(q.number || '');
+      if(m && m[2] === year) max = Math.max(max, parseInt(m[1], 10));
+    });
+    return formatQuoteNumber(max + 1, year);
+  }
+
   async function nextQuoteNumber(year){
     const fallback = () => ({ id:'draft-'+Date.now(), number: formatQuoteNumber(Date.now()%10000, year) });
     try{
@@ -1075,7 +1092,7 @@
         if(!db) return fallback();
         const ref = db.doc('meta/counter');
         const snap = await ref.get();
-        const cur = (snap.exists && snap.data().nextNumber) || 1;
+        const cur = Math.max((snap.exists && snap.data().nextNumber) || 1, START_NUMBER);
         await ref.set({nextNumber: cur + 1});
         return { id: `q-${year}-${String(cur).padStart(4,'0')}`, number: formatQuoteNumber(cur, year) };
       }
@@ -1197,9 +1214,28 @@
     return points.sort((a,b)=>a-b);
   }
 
+  // Nasconde i campi lasciati vuoti (e le loro etichette) quando il documento
+  // viene esportato in PDF o stampato, così non restano righe o segnaposto vuoti.
+  function hideEmptyFields(on){
+    const sheet = $('sheet');
+    const mark = (el, hide) => el.classList.toggle('doc-hide-empty', hide);
+    sheet.querySelectorAll('.issuer-input').forEach(el => mark(el, on && !el.textContent.trim()));
+    sheet.querySelectorAll('.issuer-line').forEach(line => {
+      const pieno = Array.from(line.querySelectorAll('.issuer-input')).some(el => el.textContent.trim());
+      mark(line, on && !pieno);
+    });
+    sheet.querySelectorAll('.cliente-grid .field').forEach(f => {
+      const ce = f.querySelector('.ce');
+      mark(f, on && ce && !ce.textContent.trim());
+    });
+  }
+  window.addEventListener('beforeprint', () => hideEmptyFields(true));
+  window.addEventListener('afterprint', () => hideEmptyFields(false));
+
   async function buildQuotePdfBlob(){
     const sheet = $('sheet');
     if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(err){} }
+    hideEmptyFields(true);
     sheet.classList.add('pdf-capture');
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     let canvas, breakPoints;
@@ -1208,6 +1244,7 @@
       canvas = await html2canvas(sheet, {scale:SCALE_PDF, backgroundColor:'#ffffff', useCORS:true});
     } finally {
       sheet.classList.remove('pdf-capture');
+      hideEmptyFields(false);
     }
 
     const { jsPDF } = window.jspdf;
@@ -1384,6 +1421,7 @@
 
   function renderDrawer(){
     const list = state.savedQuotes;
+    if(!state.quote.number) renderMeta(); // aggiorna il numero in anteprima
     $('savedCount').style.display = list.length ? 'inline-block' : 'none';
     $('savedCount').textContent = list.length;
     if(backendType === 'none'){

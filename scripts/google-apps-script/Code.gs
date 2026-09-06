@@ -29,6 +29,9 @@
 
 const API_TOKEN = 'CAMBIA_QUESTO_TOKEN_SEGRETO'; // <-- imposta una tua stringa segreta
 
+// Primo numero della serie: la numerazione dei preventivi parte da qui.
+const START_NUMBER = 105;
+
 const SHEET_NAMES = { QUOTES: 'Preventivi', COUNTER: 'Contatore', SETTINGS: 'Impostazioni' };
 const QUOTE_HEADERS = ['id', 'number', 'dataEmissione', 'dataValidita', 'clienteJson', 'righeJson', 'note', 'regimeIva', 'totalsJson', 'createdAt', 'updatedAt'];
 
@@ -92,10 +95,10 @@ function nextNumber(year) {
     }
     let seq;
     if (rowIndex === -1) {
-      seq = 1;
-      sheet.appendRow([year, 2]);
+      seq = START_NUMBER;
+      sheet.appendRow([year, seq + 1]);
     } else {
-      seq = Number(data[rowIndex][1]) || 1;
+      seq = Math.max(Number(data[rowIndex][1]) || 1, START_NUMBER);
       sheet.getRange(rowIndex + 1, 2).setValue(seq + 1);
     }
     const padded = String(seq).padStart(4, '0');
