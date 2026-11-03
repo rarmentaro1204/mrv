@@ -326,6 +326,11 @@
     padding:6px 8px;color:var(--sheet-text);max-width:220px;
   }
   .iva-note{font-size:10.5px;color:var(--sheet-faint);margin-top:10px;line-height:1.5}
+  .sconto-inputs{display:flex;align-items:baseline;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .sconto-val{width:92px}
+  .sconto-unit{font-family:var(--font-mono);font-size:12px;color:var(--sheet-muted)}
+  .totals-row.sconto .val{color:#3F7A55}
+  .sconto-warn{margin:0 0 12px}
 
   .notes{
     font-family:var(--font-body);font-size:13.5px;color:var(--sheet-muted);line-height:1.7;
@@ -707,6 +712,19 @@
             <option value="inclusa">IVA 22% inclusa</option>
           </select>
         </div>
+        <div class="iva-select-row no-print">
+          <label for="scontoTipo">Sconto</label>
+          <div class="sconto-inputs">
+            <select class="iva-select" id="scontoTipo">
+              <option value="">Nessuno</option>
+              <option value="perc">Percentuale</option>
+              <option value="importo">Importo fisso (incondizionato)</option>
+            </select>
+            <input class="num-input sconto-val" id="scontoValore" type="number" inputmode="decimal" min="0" step="0.01" aria-label="Valore dello sconto" hidden>
+            <span class="sconto-unit" id="scontoUnit" hidden></span>
+          </div>
+        </div>
+        <div class="pay-warn sconto-warn no-print" id="scontoWarn" hidden></div>
         <div id="totalsRows"></div>
         <div class="iva-note" id="ivaNote"></div>
       </div>
@@ -840,7 +858,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-11-03-allegati-v3';
+  const BUILD_ID = 'build-2026-11-03-sconto';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -1174,7 +1192,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
      così la cronologia/numerazione restano condivise tra i soci. Vedi
      scripts/google-apps-script/README.md per come crearlo e distribuirlo. */
   const SHEETS_API_URL = 'https://script.google.com/macros/s/AKfycbw9Vbv2M0vWy1ZGMzkDUeSkLzJw3rcdVO1NgAS1d9TiDc8vtlIV6R1l1-52HIwZT4z37w/exec';
-  const SHEETS_API_TOKEN = 'MatteoRobertoVittorio2026!';
+  const SHEETS_API_TOKEN = '__SHEETS_API_TOKEN__'; // inserito da Netlify (variabile SHEETS_API_TOKEN), vedi build.js
 
   function sheetsConfigured(){
     return SHEETS_API_URL && SHEETS_API_URL.indexOf('INCOLLA_QUI') === -1;
@@ -1222,6 +1240,12 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
     lastSavedSnapshot: null,
   };
 
+  // Sconto sugli importi una tantum: tipo '' (nessuno) | 'perc' | 'importo' (cifra fissa, incondizionato)
+  function normSconto(s){
+    s = s || {};
+    return {tipo: (s.tipo === 'perc' || s.tipo === 'importo') ? s.tipo : '', valore: s.valore == null ? '' : String(s.valore)};
+  }
+
   function blankQuote(demo){
     if(demo){
       return {
@@ -1234,7 +1258,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
           {rid:uid(), servizio:'Hosting e manutenzione applicativa', categoria:'Canone & assistenza', descrizione:'Infrastruttura cloud dedicata, backup giornalieri, monitoraggio.', tipo:'mensile', qty:1, prezzo:180},
           {rid:uid(), servizio:'Assistenza tecnica prioritaria', categoria:'Canone & assistenza', descrizione:'Supporto diretto con SLA di risposta entro 4 ore lavorative.', tipo:'mensile', qty:1, prezzo:150},
         ],
-        note: DEFAULT_NOTE, regimeIva:'forfettario', createdAt:null,
+        note: DEFAULT_NOTE, regimeIva:'forfettario', createdAt:null, sconto: normSconto(),
         pagamenti: {...blankPagamenti(), mesiTest: 3}, contratto: blankContratto(),
       };
     }
@@ -1242,7 +1266,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
       _id:null, number:null,
       dataEmissione: todayISO(), dataValidita: addDays(todayISO(),30),
       cliente:{ ragione:'', piva:'', indirizzo:'', citta:'', email:'', telefono:'' },
-      righe:[], note: DEFAULT_NOTE, regimeIva:'forfettario', createdAt:null,
+      righe:[], note: DEFAULT_NOTE, regimeIva:'forfettario', createdAt:null, sconto: normSconto(),
       pagamenti: blankPagamenti(), contratto: blankContratto(),
     };
   }
@@ -1375,6 +1399,17 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
   $('dataValidita').addEventListener('change', e => state.quote.dataValidita = e.target.value);
   $('note').addEventListener('input', e => { state.quote.note = fieldText(e.target); });
   $('regimeIva').addEventListener('change', e => { state.quote.regimeIva = e.target.value; renderTotals(); });
+  $('scontoTipo').addEventListener('change', e => {
+    // cambiando tipo il valore precedente non ha più senso (10% ≠ 10 €): si riparte da vuoto
+    state.quote.sconto = normSconto({tipo: e.target.value, valore: ''});
+    $('scontoValore').value = '';
+    renderSconto(); renderTotals();
+    if(e.target.value) $('scontoValore').focus();
+  });
+  $('scontoValore').addEventListener('input', e => {
+    state.quote.sconto = normSconto({...state.quote.sconto, valore: e.target.value});
+    renderTotals();
+  });
 
   /* ---------------- Rendering: righe ---------------- */
   function rigaRowHtml(r, idx){
@@ -1454,7 +1489,43 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
       else if(r.tipo==='annuale') annuale += sub;
       else tantum += sub;
     });
-    return {tantum, mensile, annuale};
+    const sc = scontoInfo(tantum, state.quote && state.quote.sconto);
+    return {tantum: Math.round((tantum - sc.amount) * 100) / 100, tantumLordo: tantum,
+            sconto: sc.amount, scontoLabel: sc.label, scontoIssue: sc.issue, mensile, annuale};
+  }
+
+  // Lo sconto si applica agli importi una tantum, sulla stessa base dei prezzi inseriti;
+  // l'IVA (se prevista dal regime) si calcola poi sull'importo scontato.
+  function scontoInfo(lordo, s){
+    s = s || {};
+    const raw = String(s.valore == null ? '' : s.valore).trim();
+    if(!s.tipo || raw === '') return {amount:0, label:'', issue:''};
+    const v = Number(raw.replace(',', '.'));
+    if(!Number.isFinite(v) || v < 0) return {amount:0, label:'', issue:'Inserisci un valore di sconto valido.'};
+    if(lordo <= 0) return {amount:0, label:'', issue: v > 0 ? 'Lo sconto si applica agli importi una tantum: al momento non ce ne sono.' : ''};
+    let amount, label, issue = '';
+    if(s.tipo === 'perc'){
+      const pc = Math.min(v, 100);
+      if(v > 100) issue = 'La percentuale di sconto non può superare 100%: applicato 100%.';
+      amount = lordo * pc / 100;
+      label = `Sconto ${String(Math.round(pc * 100) / 100).replace('.', ',')}%`;
+    } else {
+      amount = Math.min(v, lordo);
+      if(v > lordo) issue = `Lo sconto supera gli importi una tantum (${eur(lordo)}): applicato fino a quella cifra.`;
+      label = 'Sconto incondizionato';
+    }
+    return {amount: Math.round(amount * 100) / 100, label, issue};
+  }
+
+  function renderSconto(){
+    const s = state.quote.sconto = normSconto(state.quote.sconto);
+    $('scontoTipo').value = s.tipo;
+    const inp = $('scontoValore'), unit = $('scontoUnit');
+    inp.hidden = unit.hidden = !s.tipo;
+    if(document.activeElement !== inp) inp.value = s.valore;
+    unit.textContent = s.tipo === 'perc' ? '%' : '€';
+    inp.step = s.tipo === 'perc' ? '0.5' : '0.01';
+    inp.placeholder = s.tipo === 'perc' ? 'es. 10' : 'es. 500';
   }
 
   function renderTotals(){
@@ -1478,7 +1549,11 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
         rows.push(`<div class="totals-row"><span class="label">&nbsp;&nbsp;di cui IVA 22%</span><span class="val">${eur(iva)}</span></div>`);
       }
     }
-    group('Una tantum', t.tantum, '');
+    if(t.sconto > 0){
+      rows.push(`<div class="totals-row"><span class="label">Una tantum (listino)</span><span class="val">${eur(t.tantumLordo)}</span></div>` +
+        `<div class="totals-row sconto"><span class="label">${escapeHtml(t.scontoLabel)}</span><span class="val">− ${eur(t.sconto)}</span></div>`);
+    }
+    group(t.sconto > 0 ? 'Una tantum scontato' : 'Una tantum', t.tantum, '');
     group('Canone mensile', t.mensile, '/mese');
     group('Canone annuale', t.annuale, '/anno');
 
@@ -1490,6 +1565,9 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
     $('ivaNote').textContent = regime==='forfettario'
       ? "Operazione senza applicazione dell'IVA ai sensi dell'art. 1, commi 54–89, L. 190/2014 (regime forfettario)."
       : "Aliquota IVA applicata: 22%.";
+    const w = $('scontoWarn');
+    w.textContent = t.scontoIssue || '';
+    w.hidden = !t.scontoIssue;
     updatePaymentAmounts();
   }
 
@@ -1498,6 +1576,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
     renderIssuerFields(); renderFooter(); renderCondizioni(); renderMeta(); renderCliente(); renderRighe();
     $('note').textContent = state.quote.note;
     $('regimeIva').value = state.quote.regimeIva;
+    renderSconto();
     renderTotals();
     renderPagamenti();
     updateDocsStatus();
@@ -1577,8 +1656,8 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
       const payload = {
         id:q._id, number:q.number, dataEmissione:q.dataEmissione, dataValidita:q.dataValidita,
         cliente:q.cliente, righe:q.righe, note:q.note, regimeIva:q.regimeIva,
-        pagamenti:q.pagamenti, contratto:q.contratto,
-        totals, createdAt: q.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
+        pagamenti:q.pagamenti, contratto:q.contratto, sconto:q.sconto,
+        totals: {...totals, scontoCfg:q.sconto}, createdAt: q.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
       };
       if(backendType === 'claude'){
         const db = await claude.use('db');
@@ -1614,6 +1693,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
       _id:id, number:data.number, dataEmissione:data.dataEmissione, dataValidita:data.dataValidita,
       cliente:{...data.cliente}, righe:(data.righe||[]).map(r=>({...r, rid: r.rid || uid()})),
       note:data.note, regimeIva:data.regimeIva||'forfettario', createdAt:data.createdAt,
+      sconto: normSconto(data.sconto || (data.totals && data.totals.scontoCfg)),
       pagamenti: normPagamenti(data.pagamenti), contratto: normContratto(data.contratto),
     };
     state.payShowIssues = false;
@@ -1629,6 +1709,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
       _id:null, number:null, dataEmissione: todayISO(), dataValidita: addDays(todayISO(),30),
       cliente:{...data.cliente}, righe:(data.righe||[]).map(r=>({...r, rid:uid()})),
       note:data.note, regimeIva:data.regimeIva||'forfettario', createdAt:null,
+      sconto: normSconto(data.sconto || (data.totals && data.totals.scontoCfg)),
       pagamenti: normPagamenti(data.pagamenti), contratto: normContratto(data.contratto),
     };
     state.payShowIssues = false;
@@ -1856,7 +1937,7 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
     const c = (cents) => eur(cents / 100);
     $('payPlan').classList.toggle('pay-simple', regime === 'forfettario');
     $('payHeadTot').textContent = regime === 'forfettario' ? 'Importo' : 'Da pagare';
-    $('payBase').innerHTML = `Base di calcolo · corrispettivi una tantum: <b>${eur(plan.base)}</b>` +
+    $('payBase').innerHTML = `Base di calcolo · corrispettivi una tantum${calcTotals(state.quote.righe).sconto > 0 ? ' scontati' : ''}: <b>${eur(plan.base)}</b>` +
       (regime === 'esclusa' ? ' (imponibile)' : regime === 'inclusa' ? ' (IVA inclusa)' : '');
 
     document.querySelectorAll('#payPlan .pay-row[data-ms]').forEach((row, i) => {
@@ -1989,7 +2070,8 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
       milestonePercentuali,
       milestoneDate: mp.join('; '),
       canoneAnnuoTesto: canoneAnnuo > 0 ? eur(canoneAnnuo) : 'non previsto',
-      setupTesto: forfait > 0 ? eur(forfait) : '',
+      setupTesto: forfait > 0 ? eur(forfait) + (t.sconto > 0
+        ? ` (prezzo di listino ${eur(net(t.tantumLordo))}, ${t.scontoLabel.toLowerCase()} di ${eur(net(t.sconto))})` : '') : '',
       anno1: anno(0), anno2: anno(1), anno3: anno(2),
       tempiSlaTesto: tempiSla,
     };
