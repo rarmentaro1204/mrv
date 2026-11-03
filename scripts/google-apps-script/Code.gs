@@ -33,7 +33,7 @@ const API_TOKEN = 'CAMBIA_QUESTO_TOKEN_SEGRETO'; // <-- imposta una tua stringa 
 const START_NUMBER = 105;
 
 const SHEET_NAMES = { QUOTES: 'Preventivi', COUNTER: 'Contatore', SETTINGS: 'Impostazioni' };
-const QUOTE_HEADERS = ['id', 'number', 'dataEmissione', 'dataValidita', 'clienteJson', 'righeJson', 'note', 'regimeIva', 'totalsJson', 'createdAt', 'updatedAt'];
+const QUOTE_HEADERS = ['id', 'number', 'dataEmissione', 'dataValidita', 'clienteJson', 'righeJson', 'note', 'regimeIva', 'totalsJson', 'createdAt', 'updatedAt', 'extraJson'];
 
 function doGet(e) { return handle(e); }
 function doPost(e) { return handle(e); }
@@ -81,6 +81,14 @@ function getSheet(name, headers) {
   return sheet;
 }
 
+// Fogli creati con una versione precedente: aggiunge le intestazioni delle colonne nuove
+function ensureHeaders(sheet, headers) {
+  const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  headers.forEach(function (h, i) {
+    if (!current[i]) sheet.getRange(1, i + 1).setValue(h);
+  });
+}
+
 /* ---------------- Contatore (numerazione progressiva per anno) ---------------- */
 function nextNumber(year) {
   year = String(year || new Date().getFullYear());
@@ -112,6 +120,7 @@ function nextNumber(year) {
 function saveQuote(quote) {
   if (!quote || !quote.id) throw new Error('Preventivo non valido (id mancante)');
   const sheet = getSheet(SHEET_NAMES.QUOTES, QUOTE_HEADERS);
+  ensureHeaders(sheet, QUOTE_HEADERS);
   const data = sheet.getDataRange().getValues();
   let rowIndex = -1;
   for (let i = 1; i < data.length; i++) {
@@ -123,6 +132,8 @@ function saveQuote(quote) {
     JSON.stringify(quote.cliente || {}), JSON.stringify(quote.righe || []),
     quote.note || '', quote.regimeIva || 'forfettario', JSON.stringify(quote.totals || {}),
     quote.createdAt || now, now,
+    // piano dei pagamenti e dati per NDA/Contratto
+    JSON.stringify({ pagamenti: quote.pagamenti || null, contratto: quote.contratto || null }),
   ];
   if (rowIndex === -1) sheet.appendRow(row);
   else sheet.getRange(rowIndex + 1, 1, 1, row.length).setValues([row]);
@@ -141,6 +152,8 @@ function listQuotes() {
       cliente: safeParse(r[4], {}), righe: safeParse(r[5], []),
       note: r[6], regimeIva: r[7], totals: safeParse(r[8], {}),
       createdAt: r[9], updatedAt: r[10],
+      pagamenti: safeParse(r[11], {}).pagamenti || undefined,
+      contratto: safeParse(r[11], {}).contratto || undefined,
     });
   }
   out.sort(function (a, b) { return String(b.updatedAt).localeCompare(String(a.updatedAt)); });

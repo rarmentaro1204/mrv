@@ -45,7 +45,10 @@ Nuova versione → Distribuisci**.
 ## Struttura del foglio (creata automaticamente)
 
 - **Preventivi** — una riga per preventivo salvato (id, numero, cliente,
-  righe e totali in JSON, date, timestamp).
+  righe e totali in JSON, date, timestamp). La colonna `extraJson` contiene
+  il piano dei pagamenti (percentuali e mesi di test) e i dati usati per NDA
+  e Contratto; su un foglio esistente l'intestazione viene aggiunta da sola
+  al primo salvataggio.
 - **Contatore** — un rigo per anno con il prossimo numero progressivo da
   assegnare.
 - **Impostazioni** — coppia chiave/valore, contiene la riga `company` con
