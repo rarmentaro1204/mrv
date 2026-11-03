@@ -332,6 +332,14 @@
     border-top:1px solid var(--sheet-line);padding-top:14px;
   }
 
+  .accettazione{display:flex;gap:44px;margin-top:6px;flex-wrap:wrap}
+  .firma-box{flex:1 1 220px;min-width:0}
+  .firma-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--sheet-faint);margin-bottom:30px}
+  .firma-line{border-bottom:1px solid var(--sheet-line)}
+  .accettazione-note{font-size:11.5px;color:var(--sheet-muted);margin-top:18px;line-height:1.6}
+  .condizioni-text{font-family:var(--font-body);font-size:10px;color:var(--sheet-muted);line-height:1.6}
+
   .sheet-footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--sheet-line);text-align:center}
   .footer-legal{
     text-align:center;
@@ -458,7 +466,7 @@
     table.voci{min-width:0}
     .table-wrap{overflow:visible}
     /* Un blocco non viene mai spezzato a metà tra due pagine */
-    table.voci tr, .totals-box, .totals-wrap, .sheet-footer, .field, .notes, .sheet-head{
+    table.voci tr, .totals-box, .totals-wrap, .sheet-footer, .field, .sheet-head, .accettazione{
       break-inside:avoid; page-break-inside:avoid;
     }
   }
@@ -610,6 +618,21 @@
     <div class="eyebrow"><span>Note e condizioni</span><span class="line"></span></div>
     <div class="ce notes" contenteditable="true" id="note" data-placeholder="Note e condizioni del preventivo"></div>
 
+    <div class="divider"></div>
+
+    <div class="eyebrow"><span>Accettazione</span><span class="line"></span></div>
+    <div class="accettazione">
+      <div class="firma-box"><div class="firma-label">Data</div><div class="firma-line"></div></div>
+      <div class="firma-box"><div class="firma-label">Timbro e firma</div><div class="firma-line"></div></div>
+    </div>
+    <div class="accettazione-note">La sottoscrizione dell'offerta include l'accettazione delle «Condizioni generali di vendita» riportate di seguito.</div>
+
+    <div class="divider"></div>
+
+    <div class="eyebrow"><span>Condizioni generali di vendita</span><span class="line"></span></div>
+    <div class="ce condizioni-text" contenteditable="true" id="condizioniGenerali" data-placeholder="Condizioni generali di vendita"></div>
+    <div class="footer-hint no-print">Testo modificabile liberamente · <button type="button" id="btnResetCondizioni">rigenera dal modello</button></div>
+
     <div class="sheet-footer">
       <div class="ce footer-legal" contenteditable="true" id="footerLegal" data-placeholder="Dati aziendali a piè di pagina"></div>
       <div class="footer-hint no-print">Testo modificabile liberamente · <button type="button" id="btnResetFooter">rigenera dai dati aziendali</button></div>
@@ -657,7 +680,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-09-06-numerazione-105';
+  const BUILD_ID = 'build-2026-11-03-condizioni';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -733,7 +756,104 @@
     {id:'svc-11', categoria:'Extra', nome:'Integrazione con servizi terzi', descrizione:'Collegamento API con software di fatturazione, e-commerce o marketplace.', tipo:'una_tantum', prezzo:900},
   ];
 
-  const DEFAULT_NOTE = "Il preventivo ha validità 30 giorni dalla data di emissione. Modalità di pagamento: 50% all'avvio del progetto, 50% alla consegna. I canoni ricorrenti vengono fatturati anticipatamente con cadenza mensile/annuale a partire dal mese di attivazione del servizio.";
+  const DEFAULT_NOTE = `CONDIZIONI DI PAGAMENTO
+Per le licenze: all'ordine. I canoni del servizio dovranno essere corrisposti anticipatamente e contestualmente all'ordine di acquisto. 30 giorni prima della scadenza, MRV Consulting invierà automaticamente un messaggio di avviso e la proposta per il nuovo contratto.
+Banca d'appoggio: [da completare] - IBAN: [da completare]
+
+VARIAZIONE DEI CANONI
+I canoni indicati si intendono fissi ed invariabili fino alla data naturale di scadenza del contratto.
+
+RINNOVO TARDIVO DEL CONTRATTO
+MRV Consulting provvederà al rinnovo del contratto solo dopo aver ricevuto il pagamento della relativa fattura. Eventuali conferme di rinnovo e/o pagamenti inviati successivamente alla naturale scadenza del contratto comporteranno un aumento del valore globale delle licenze pari all'8%.
+
+TERMINI DI DISDETTA
+L'eventuale disdetta del contratto dovrà essere notificata 60 giorni prima della naturale scadenza del rinnovo delle licenze, mediante comunicazione email all'indirizzo robertoarmentaro@pec.it.
+
+VALIDITÀ DELLA PRESENTE OFFERTA
+La presente offerta ha validità fino alla data indicata come «Valido fino al» in testa al documento.`;
+
+  // Condizioni generali di vendita (modello aziendale, modificabile nel documento)
+  const DEFAULT_CONDIZIONI = `a. ASPETTI GENERALI
+Tutta la fornitura verrà realizzata sotto il diretto controllo di MRV Consulting da personale specializzato da essa selezionato, presso la propria sede. Il Cliente metterà a disposizione del personale MRV Consulting, durante il periodo di permanenza presso la sede indicata dal Cliente stesso, quanto necessario per lo svolgimento delle attività di installazione e di accettazione.
+Il Cliente si impegna a operare affinché tutte le informazioni funzionali, architetturali e logistiche necessarie alla realizzazione del progetto siano tempestivamente rese disponibili a MRV Consulting, sia da parte degli enti interni interessati al progetto che da parte di eventuali altri fornitori.
+
+b. CONDUZIONE DEL PROGETTO E METODOLOGIA
+L'attività complessiva per la realizzazione del Sistema verrà condotta secondo le procedure standard previste da MRV Consulting.
+In tale ambito, si richiede al Cliente di nominare per iscritto un Responsabile del Progetto; MRV Consulting riconoscerà in via esclusiva questa figura quale unica interfaccia rappresentativa del Cliente.
+Il Cliente si impegna ad assumere tempestivamente, attraverso il Responsabile Progetto, le decisioni funzionali ed operative che si renderanno necessarie durante lo svolgimento del progetto.
+In particolare, sarà esclusiva responsabilità del Responsabile di Progetto il commento ovvero l'approvazione dei documenti contrattuali (oggetto di approvazione) entro i tempi contrattuali previsti a partire dalla data di consegna. È inteso che la documentazione di progetto, quando approvata, identifichi esattamente le necessità del Cliente e gli scopi ai quali si intendono dedicare i prodotti e le soluzioni oggetto di fornitura.
+Parimenti MRV Consulting nominerà un Responsabile di Progetto quale interfaccia verso il Cliente.
+Il progetto sarà sviluppato secondo le Metodologie di Progetto MRV Consulting, ai cui standard formali e qualitativi quanto prodotto farà riferimento.
+A tal fine l'offerta prevede una valutazione forfetaria dell'impegno previsto dal nostro personale per l'effettuazione di tale attività di Conduzione del Progetto.
+
+c. VARIANTI DEL PROGETTO
+Eventuali modifiche che dovessero emergere nel corso dei lavori rispetto alle «Specifiche Funzionali» concordate ed approvate nella prima fase del progetto saranno oggetto di una nuova offerta.
+Nessuna modifica sarà recepita o realizzata se non a seguito di una specifica formalizzazione concordata con il Responsabile di Progetto del Cliente.
+
+d. CONSEGNE
+Tutti i tempi di prevista consegna vanno intesi a partire dalla data di ricevimento dell'ordine.
+
+e. COLLAUDO FINALE DI ACCETTAZIONE
+Per quanto riguarda gli applicativi standard MRV Consulting, questi ultimi si intendono accettati al momento della stipula dell'ordine (si fa riferimento alla documentazione tecnica del prodotto).
+Il collaudo e accettazione avrà per oggetto le procedure di interfacciamento ed eventuali personalizzazioni, conformemente a quanto descritto nei paragrafi di fornitura.
+Per quanto riguarda il collaudo delle procedure di interfacciamento ed eventuali personalizzazioni, verrà data comunicazione al Cliente, nella figura del suo responsabile di progetto, della avvenuta realizzazione delle stesse.
+Entro 5 giorni lavorativi dalla comunicazione verrà effettuato, in presenza di un responsabile del Cliente, il Test di Accettazione delle procedure di interfacciamento ed eventuali personalizzazioni, conformemente alle procedure descritte nel Piano di Test di Accettazione.
+Il Collaudo Finale costituisce il completamento della fornitura ed originerà un Verbale di Accettazione, redatto e firmato di comune accordo da entrambe le parti.
+Il Cliente non potrà rifiutare per qualsiasi motivo di procedere alla Accettazione Finale, se non per grave e dimostrata responsabilità di MRV Consulting inerente il non idoneo funzionamento globale del Sistema oggetto della presente offerta.
+In caso di controversia sull'effettuabilità della Accettazione Finale, quest'ultima sarà ritenuta effettuata non oltre l'istante in cui il Sistema venga utilizzato in produzione per almeno tre giorni continuativi.
+
+f. PROPRIETÀ INTELLETTUALE
+Le Metodologie, il Know-how applicativo, le soluzioni personalizzate realizzate e le Licenze dei prodotti Software standard MRV Consulting rimangono di esclusiva proprietà di MRV Consulting e non saranno comunicabili dal Cliente ad altre Società.
+Per prodotti forniti da terze parti valgono le condizioni d'uso del Produttore.
+
+g. ESCLUSIVITÀ E SEGRETEZZA
+Si intende che il risultato del nostro lavoro di progettazione e realizzazione del Sistema in oggetto, per quanto strettamente correlato a specifiche unicità di natura tecnologica ed organizzativa del Cliente, non dovrà essere in alcun modo comunicato ad altre Aziende.
+Resta inteso che tutte le cognizioni tecniche, di qualunque genere, di cui verremo in possesso durante lo svolgimento dell'attività oggetto della presente proposta, saranno considerate strettamente riservate.
+Il Cliente si impegna a non divulgare a terzi metodologie e Know-how applicativo forniti da MRV Consulting nell'ambito del progetto.
+
+h. GARANZIA
+La soluzione/prodotto standard è coperta da garanzia di buon funzionamento; essa avrà decorrenza dalla data di installazione presso il Cliente Finale. La durata del periodo di garanzia è di 6 (sei) mesi di calendario. Per quanto riguarda viceversa le procedure personalizzate, la garanzia decorre a partire dalla installazione ed accettazione della parte personalizzata e ha durata 3 (tre) mesi.
+Entro detto periodo MRV Consulting si impegna a rispondere ad eventuali segnalazioni di documentati difetti o malfunzionamenti imputabili a MRV Consulting. A seguito di tali segnalazioni MRV Consulting porrà gratuitamente rimedio al difetto o al malfunzionamento, in tempi minimi rispetto alle proprie possibilità. Ciò vale se quanto segnalato consiste in una esplicita difformità di funzionamento rispetto a quanto descritto nella documentazione tecnica di progetto, salvo che per le parti o componenti per le quali è dichiarata eccezione alla garanzia. Interventi non imputabili a quanto sopra verranno addebitati al Cliente alle tariffe vigenti. MRV Consulting si dichiara comunque disponibile a fornire servizi standard e/o personalizzati di Manutenzione del Sistema in tempi successivi al periodo di garanzia; tale servizio sarà eventualmente oggetto di una specifica offerta.
+
+i. ECCEZIONI ALLA GARANZIA
+Per i componenti cosiddetti Commerciali in genere, vale la Garanzia del Produttore. MRV Consulting non assume alcuna responsabilità formale per anomalie dei componenti e/o difformità di funzionamento rispetto al dichiarato dal Produttore stesso.
+Sono esclusi dalla garanzia e pertanto saranno addebitati tutti gli eventuali interventi relativi a:
+- malfunzionamenti indotti da modifiche apportate dall'utilizzatore;
+- malfunzionamenti dovuti ad uso improprio dei componenti;
+- ogni altro malfunzionamento non oggettivamente imputabile a MRV Consulting;
+- non malfunzionamenti.
+A seguito di ogni intervento, il personale MRV Consulting provvederà a redigere un verbale d'intervento.
+Qualsiasi intervento sul Sistema non eseguito da personale MRV Consulting farà immediatamente decadere la garanzia, liberando la nostra Società da ogni successiva responsabilità.
+
+j. ESCLUSIONI
+Con riferimento all'Oggetto della Fornitura, sono escluse dalle attività di studio e dalle forniture proposte:
+1. fornitura e posa di cavi di alimentazione di alcun genere;
+2. fornitura e posa dei cavi Ethernet per il collegamento dei PC in rete;
+3. fornitura ed installazione di canaline e opere impiantistiche civili in genere;
+4. fornitura ed installazione di dispositivi per il collegamento remoto;
+5. ulteriori servizi di Assistenza oltre a quelli previsti nel presente contratto;
+6. qualunque attività su sistemi e apparecchiature non fornite da MRV Consulting;
+7. licenze software oltre a quelle definite nella presente fornitura;
+8. tutto quanto non esplicitamente citato in questo documento.
+
+k. REFERENZE
+Il Cliente autorizza MRV Consulting ad inserire tra la lista delle referenze il proprio nominativo (comprendente Ragione Sociale, logo aziendale, settore di appartenenza e prodotto utilizzato) e a diffondere tali dati su supporto cartaceo, telematico, informatico e sul sito web aziendale di MRV Consulting (mrvconsulting.it). In ogni momento il Cliente ha il diritto di esercitare tutti i diritti di accesso ai propri dati, tra i quali i diritti di rettifica, aggiornamento e cancellazione, fornendo comunicazione esplicita a MRV Consulting.
+
+l. POLITICHE DI MARKETING E COMUNICAZIONE
+Il Cliente autorizza MRV Consulting alla redazione di materiale secondo le politiche aziendali di Marketing e Comunicazione da MRV Consulting adottate ed aventi ad oggetto il Cliente stesso. Tale materiale può riguardare comunicati stampa, pubbliredazionali, pubblicazione di case history, comunicazioni di carattere generale per il parco installato di MRV Consulting e simili.
+MRV Consulting si impegna ad informare preventivamente il Cliente delle politiche di Marketing e Comunicazione aventi ad oggetto l'azienda Cliente e a fornire, in visione preventiva, il materiale di riferimento.
+MRV Consulting si impegna a non diffondere informazioni inerenti l'azienda Cliente ritenute strategiche per la stessa e alla massima e totale riservatezza delle informazioni stesse.
+Qualsiasi altra attività di Marketing e Comunicazione che esuli dalle attività di cui sopra avente ad oggetto l'azienda Cliente deve essere preventivamente concordata tra il Cliente e MRV Consulting.
+
+m. VISITE AZIENDALI
+Il Cliente accetta di diventare un possibile Demo Point per MRV Consulting.
+MRV Consulting si potrà pregiare di far visionare il progetto implementato presso l'azienda Cliente alle proprie aziende Prospect, previa autorizzazione e disponibilità del Cliente stesso.
+
+n. RESPONSABILITÀ
+Il Cliente e MRV Consulting convengono che la responsabilità di una delle due parti nei confronti dell'altra per perdite o danni non possa comunque superare l'ammontare totale fatturato e/o fatturabile al Cliente stesso per i lavori che hanno dato origine alle perdite o ai danneggiamenti.
+Dato il carattere del progetto, MRV Consulting non sarà comunque responsabile, sia nelle fasi di test e di installazione sia per il/i periodo/i di garanzia, per effetti sui macchinari, impianti od altri danni generici diretti ed indiretti derivanti dall'uso dei prodotti e soluzioni fornite, eccezione fatta per eventuali danni esplicitamente attribuibili a dolo o colpa grave di MRV Consulting medesima e/o suoi eventuali subfornitori diretti; questo in espressa deroga agli articoli 1374, 1667, 1668 del Codice Civile.
+In relazione a quanto sopraddetto, MRV Consulting richiede espressamente che le attività dei propri operatori durante le fasi di installazione e prove sul campo siano sempre assistite e coordinate dal Responsabile del Progetto lato Cliente, che assicurerà peraltro la operatività sugli impianti e su quant'altro non in fornitura MRV Consulting.
+Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con adeguata continuità, delle condizioni operative necessarie per il corretto svolgimento delle attività MRV Consulting nella sede di installazione, peraltro nel rispetto delle norme di sicurezza vigenti.`;
 
   const TIPO_LABEL = {una_tantum:'Una tantum', mensile:'Mensile', annuale:'Annuale'};
 
@@ -863,6 +983,25 @@
   $('footerLegal').addEventListener('input', (e)=>{
     state.company.footerText = fieldText(e.target);
     scheduleCompanySave();
+  });
+
+  function renderCondizioni(){
+    const el = $('condizioniGenerali');
+    if(document.activeElement === el) return;
+    if(!state.company.condizioniGenerali){ state.company.condizioniGenerali = DEFAULT_CONDIZIONI; }
+    el.textContent = state.company.condizioniGenerali;
+  }
+
+  $('condizioniGenerali').addEventListener('input', (e)=>{
+    state.company.condizioniGenerali = fieldText(e.target);
+    scheduleCompanySave();
+  });
+
+  $('btnResetCondizioni').addEventListener('click', ()=>{
+    state.company.condizioniGenerali = DEFAULT_CONDIZIONI;
+    renderCondizioni();
+    scheduleCompanySave();
+    toast('Condizioni generali ripristinate dal modello');
   });
 
   $('btnResetFooter').addEventListener('click', ()=>{
@@ -1044,7 +1183,7 @@
 
   /* ---------------- Render everything ---------------- */
   function renderAll(){
-    renderIssuerFields(); renderFooter(); renderMeta(); renderCliente(); renderRighe();
+    renderIssuerFields(); renderFooter(); renderCondizioni(); renderMeta(); renderCliente(); renderRighe();
     $('note').textContent = state.quote.note;
     $('regimeIva').value = state.quote.regimeIva;
     renderTotals();
@@ -1203,14 +1342,33 @@
 
   // Punti in cui è lecito spezzare la pagina: la fine di una riga di servizio,
   // di una sezione, del riquadro totali... Serve a non tagliare mai un blocco a metà.
+  // Dentro un blocco di testo lungo (note, condizioni generali) si può spezzare
+  // fra una riga e l'altra: misura la posizione di ogni riga di testo.
+  function textLineBreakPoints(el, top){
+    const pts = [];
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    let node;
+    while((node = walker.nextNode())){
+      range.selectNodeContents(node);
+      for(const r of range.getClientRects()){
+        if(r.height > 0) pts.push(r.bottom - top);
+      }
+    }
+    return pts;
+  }
+
   function collectBreakPoints(sheet){
     const top = sheet.getBoundingClientRect().top;
     const points = [];
-    sheet.querySelectorAll('#righeBody tr, .divider, .table-wrap, .totals-wrap, .notes, .sheet-footer, .cliente-grid, .sheet-head')
+    sheet.querySelectorAll('#righeBody tr, .divider, .table-wrap, .totals-wrap, .notes, .accettazione, .accettazione-note, .condizioni-text, .sheet-footer, .cliente-grid, .sheet-head')
       .forEach(el=>{
         const b = el.getBoundingClientRect().bottom - top;
         if(b > 0) points.push(b * SCALE_PDF);
       });
+    sheet.querySelectorAll('.notes, .condizioni-text').forEach(el=>{
+      textLineBreakPoints(el, top).forEach(b=>{ if(b > 0) points.push(b * SCALE_PDF); });
+    });
     return points.sort((a,b)=>a-b);
   }
 
@@ -1476,7 +1634,7 @@
           state.dbReady = true;
 
           db.doc('settings/company').onSnapshot(snap=>{
-            if(snap.exists){ state.company = mergeCompanyDefaults(snap.data()); renderIssuerFields(); renderFooter(); }
+            if(snap.exists){ state.company = mergeCompanyDefaults(snap.data()); renderIssuerFields(); renderFooter(); renderCondizioni(); }
           }, err=>console.warn('settings sub error', err));
 
           db.collection('services').onSnapshot(snap=>{
@@ -1501,7 +1659,7 @@
         const settings = await sheetsApi.getSettings();
         if(settings && Object.keys(settings).length){
           state.company = mergeCompanyDefaults(settings);
-          renderIssuerFields(); renderFooter();
+          renderIssuerFields(); renderFooter(); renderCondizioni();
         }
       }catch(err){ console.warn('sheets getSettings error', err); }
       await refreshSheetsQuotes();
