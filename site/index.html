@@ -787,13 +787,13 @@
       <div class="firma-box"><div class="firma-label">Data</div><div class="firma-line"></div></div>
       <div class="firma-box"><div class="firma-label">Timbro e firma</div><div class="firma-line"></div></div>
     </div>
-    <div class="accettazione-note">La sottoscrizione dell'offerta include l'accettazione delle «Condizioni generali di vendita» riportate di seguito.</div>
+    <div class="accettazione-note">Le condizioni di fornitura sono regolate dal Contratto di fornitura, da sottoscrivere unitamente alla presente offerta.</div>
 
-    <div class="divider"></div>
-
-    <div class="eyebrow"><span>Condizioni generali di vendita</span><span class="line"></span></div>
-    <div class="ce condizioni-text" contenteditable="true" id="condizioniGenerali" data-placeholder="Condizioni generali di vendita"></div>
-    <div class="footer-hint no-print">Testo modificabile liberamente · <button type="button" id="btnResetCondizioni">rigenera dal modello</button></div>
+    <!-- Condizioni generali di vendita: non più nel preventivo (sono nel Contratto). Blocco nascosto, escluso da schermo e PDF. -->
+    <div id="condizioniBlock" hidden>
+      <div class="ce condizioni-text" contenteditable="true" id="condizioniGenerali"></div>
+      <button type="button" id="btnResetCondizioni"></button>
+    </div>
 
     <div class="sheet-footer">
       <div class="ce footer-legal" contenteditable="true" id="footerLegal" data-placeholder="Dati aziendali a piè di pagina"></div>
@@ -858,7 +858,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-11-03-sconto';
+  const BUILD_ID = 'build-2026-11-04-senza-condizioni';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
