@@ -777,8 +777,8 @@
 
     <div class="divider"></div>
 
-    <div class="eyebrow"><span>Note e condizioni</span><span class="line"></span></div>
-    <div class="ce notes" contenteditable="true" id="note" data-placeholder="Note e condizioni del preventivo"></div>
+    <div class="eyebrow"><span>Note</span><span class="line"></span></div>
+    <div class="ce notes" contenteditable="true" id="note" data-placeholder="Note del preventivo"></div>
 
     <div class="divider"></div>
 
@@ -858,7 +858,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-11-04-senza-condizioni';
+  const BUILD_ID = 'build-2026-11-06-note';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -1083,17 +1083,8 @@
   ];
 
   const DEFAULT_NOTE = `CONDIZIONI DI PAGAMENTO
-I corrispettivi una tantum sono dovuti secondo il piano dei pagamenti riportato sopra: una quota alla sigla del contratto, una alla consegna della versione beta e il saldo al termine del periodo di test. I canoni ricorrenti sono fatturati con cadenza annuale anticipata. 30 giorni prima della scadenza, MRV Consulting invierà automaticamente un messaggio di avviso e la proposta per il nuovo contratto.
+I corrispettivi una tantum sono dovuti secondo il piano dei pagamenti riportato sopra: una quota alla sigla del contratto, una alla consegna della versione beta e il saldo al termine del periodo di test. Gli eventuali canoni ricorrenti sono fatturati con cadenza annuale anticipata.
 Banca d'appoggio: [da completare] - IBAN: [da completare]
-
-VARIAZIONE DEI CANONI
-I canoni indicati si intendono fissi ed invariabili fino alla data naturale di scadenza del contratto.
-
-RINNOVO TARDIVO DEL CONTRATTO
-MRV Consulting provvederà al rinnovo del contratto solo dopo aver ricevuto il pagamento della relativa fattura. Eventuali conferme di rinnovo e/o pagamenti inviati successivamente alla naturale scadenza del contratto comporteranno un aumento del valore globale delle licenze pari all'8%.
-
-TERMINI DI DISDETTA
-L'eventuale disdetta del contratto dovrà essere notificata 60 giorni prima della naturale scadenza del rinnovo delle licenze, mediante comunicazione email all'indirizzo robertoarmentaro@pec.it.
 
 VALIDITÀ DELLA PRESENTE OFFERTA
 La presente offerta ha validità fino alla data indicata come «Valido fino al» in testa al documento.`;
