@@ -858,7 +858,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-11-06-note';
+  const BUILD_ID = 'build-2026-11-06-note-vecchi';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
@@ -1679,11 +1679,31 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
     }
   });
 
+  // Note dei preventivi salvati con versioni precedenti: si tolgono le clausole che ora stanno
+  // nel Contratto (rinnovo, disdetta, variazione canoni) e le vecchie modalità di pagamento.
+  // Il resto del testo, comprese le modifiche fatte a mano, resta com'è.
+  const PAGAMENTO_NUOVO = "I corrispettivi una tantum sono dovuti secondo il piano dei pagamenti riportato sopra: una quota alla sigla del contratto, una alla consegna della versione beta e il saldo al termine del periodo di test. Gli eventuali canoni ricorrenti sono fatturati con cadenza annuale anticipata.";
+  function cleanLegacyNote(note){
+    let t = String(note == null ? '' : note).replace(/\r\n/g, '\n');
+    const orig = t;
+    if(t.trim() === "Il preventivo ha validità 30 giorni dalla data di emissione. Modalità di pagamento: 50% all'avvio del progetto, 50% alla consegna. I canoni ricorrenti vengono fatturati anticipatamente con cadenza mensile/annuale a partire dal mese di attivazione del servizio.")
+      return {note: DEFAULT_NOTE, changed: true};
+    ['VARIAZIONE DEI CANONI', 'RINNOVO TARDIVO DEL CONTRATTO', 'TERMINI DI DISDETTA'].forEach(h => {
+      t = t.replace(new RegExp('(^|\\n)' + h + '[ \\t]*\\n(?:[^\\n]+\\n?)*\\n*', 'g'), '$1');
+    });
+    t = t.replace(/ ?30 giorni prima della scadenza, MRV Consulting invierà automaticamente un messaggio di avviso e la proposta per il nuovo contratto\./g, '');
+    t = t.replace("Per le licenze: all'ordine. I canoni del servizio dovranno essere corrisposti anticipatamente e contestualmente all'ordine di acquisto.", PAGAMENTO_NUOVO);
+    t = t.replace(/(^|\n)I canoni ricorrenti sono fatturati con cadenza annuale anticipata\./, '$1Gli eventuali canoni ricorrenti sono fatturati con cadenza annuale anticipata.');
+    t = t.replace(/ I canoni ricorrenti sono fatturati con cadenza annuale anticipata\./, ' Gli eventuali canoni ricorrenti sono fatturati con cadenza annuale anticipata.');
+    t = t.replace(/\n{3,}/g, '\n\n').replace(/\s+$/, '');
+    return {note: t, changed: t !== orig.replace(/\s+$/, '')};
+  }
+
   function loadQuote(data, id){
     state.quote = {
       _id:id, number:data.number, dataEmissione:data.dataEmissione, dataValidita:data.dataValidita,
       cliente:{...data.cliente}, righe:(data.righe||[]).map(r=>({...r, rid: r.rid || uid()})),
-      note:data.note, regimeIva:data.regimeIva||'forfettario', createdAt:data.createdAt,
+      note:cleanLegacyNote(data.note).note, regimeIva:data.regimeIva||'forfettario', createdAt:data.createdAt,
       sconto: normSconto(data.sconto || (data.totals && data.totals.scontoCfg)),
       pagamenti: normPagamenti(data.pagamenti), contratto: normContratto(data.contratto),
     };
@@ -1692,14 +1712,16 @@ Il Responsabile del Progetto lato Cliente assicurerà la disponibilità, con ade
     $('demoBanner').style.display = 'none';
     renderAll();
     closeDrawer();
-    toast(`Preventivo ${data.number} caricato`);
+    toast(cleanLegacyNote(data.note).changed
+      ? `Preventivo ${data.number} caricato · Note aggiornate (le clausole sono ora nel Contratto): salva per conservarle`
+      : `Preventivo ${data.number} caricato`);
   }
 
   function duplicateQuote(data){
     state.quote = {
       _id:null, number:null, dataEmissione: todayISO(), dataValidita: addDays(todayISO(),30),
       cliente:{...data.cliente}, righe:(data.righe||[]).map(r=>({...r, rid:uid()})),
-      note:data.note, regimeIva:data.regimeIva||'forfettario', createdAt:null,
+      note:cleanLegacyNote(data.note).note, regimeIva:data.regimeIva||'forfettario', createdAt:null,
       sconto: normSconto(data.sconto || (data.totals && data.totals.scontoCfg)),
       pagamenti: normPagamenti(data.pagamenti), contratto: normContratto(data.contratto),
     };
