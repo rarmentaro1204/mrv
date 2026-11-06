@@ -775,10 +775,10 @@
       </div>
     </div>
 
-    <div class="divider"></div>
-
-    <div class="eyebrow"><span>Note</span><span class="line"></span></div>
-    <div class="ce notes" contenteditable="true" id="note" data-placeholder="Note del preventivo"></div>
+    <!-- Note: non più nel preventivo (pagamenti nel piano, condizioni nel Contratto). Blocco nascosto, escluso da schermo e PDF. -->
+    <div id="noteBlock" hidden>
+      <div class="ce notes" contenteditable="true" id="note"></div>
+    </div>
 
     <div class="divider"></div>
 
@@ -858,7 +858,7 @@
 
   // Marcatore di versione: serve solo a verificare che il deploy visualizzato
   // sia effettivamente l'ultimo pubblicato (vedi angolo in basso a sinistra).
-  const BUILD_ID = 'build-2026-11-06-note-vecchi';
+  const BUILD_ID = 'build-2026-11-06-senza-note';
   console.log('[MRV Preventivi]', BUILD_ID);
   { const tag = document.getElementById('buildTag'); if(tag) tag.textContent = BUILD_ID; }
 
